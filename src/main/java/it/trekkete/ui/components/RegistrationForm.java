@@ -65,6 +65,26 @@ public class RegistrationForm extends FormLayout {
         setColspan(submitButton, 2);
     }
 
+    public H3 getTitle() {
+        return title;
+    }
+
+    public TextField getFirstName() {
+        return firstName;
+    }
+
+    public TextField getLastName() {
+        return lastName;
+    }
+
+    public EmailField getEmail() {
+        return email;
+    }
+
+    public TextField getPhoneNumber() {
+        return phoneNumber;
+    }
+
     public PasswordField getPasswordField() { return password; }
 
     public PasswordField getPasswordConfirmField() { return passwordConfirm; }

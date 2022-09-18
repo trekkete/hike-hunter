@@ -20,6 +20,8 @@ public class Trip extends AbstractEntity {
 
     private Integer rating;
 
+    private Integer maxParticipants;
+
     public String getTitle() {
         return title;
     }
@@ -75,4 +77,24 @@ public class Trip extends AbstractEntity {
     public void setRating(Integer rating) {
         this.rating = rating;
     }
+
+    public Integer getMaxParticipants() {
+        return maxParticipants;
+    }
+
+    public void setMaxParticipants(Integer maxParticipants) {
+        this.maxParticipants = maxParticipants;
+    }
+
+    public static String formatRating(Integer rating) {
+        return switch (rating) {
+            case 1 -> "Molto facile";
+            case 2 -> "Facile";
+            case 3 -> "Media";
+            case 4 -> "Difficile";
+            case 5 -> "Molto difficile";
+            default -> "Difficoltà ignota";
+        };
+    }
+
 }

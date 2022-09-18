@@ -1,21 +1,31 @@
 package it.trekkete.ui.views.login;
 
+import com.google.gson.Gson;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
+import it.trekkete.data.Role;
+import it.trekkete.data.entity.User;
+import it.trekkete.data.entity.UserExtendedData;
+import it.trekkete.data.service.UserRepository;
 import it.trekkete.ui.components.RegistrationForm;
-import it.trekkete.ui.components.RegistrationFormBinder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+import java.time.ZonedDateTime;
+import java.util.Set;
 
 @PageTitle(value = "Registrati")
 @Route(value = "register")
 @AnonymousAllowed
 public class RegistrationView extends VerticalLayout {
 
-    public RegistrationView() {
+    public RegistrationView(@Autowired UserRepository userRepository) {
         RegistrationForm registrationForm = new RegistrationForm();
         // Center the RegistrationForm
         setHorizontalComponentAlignment(Alignment.CENTER, registrationForm);
@@ -58,7 +68,49 @@ public class RegistrationView extends VerticalLayout {
 
         add(container);
 
-        RegistrationFormBinder registrationFormBinder = new RegistrationFormBinder(registrationForm);
-        registrationFormBinder.addBindingAndValidation();
+        registrationForm.getSubmitButton().addClickListener(click -> {
+
+            String pass1 = registrationForm.getPasswordField().getValue();
+            String pass2 = registrationForm.getPasswordConfirmField().getValue();
+
+            if (userRepository.findByUsername(registrationForm.getEmail().getValue()) != null) {
+                registrationForm.getEmail().setInvalid(true);
+                registrationForm.getEmail().setErrorMessage("Esiste già un account associato a questa mail");
+            }
+
+            if (pass1.length() < 8) {
+                registrationForm.getPasswordField().setInvalid(true);
+                registrationForm.getPasswordField().setErrorMessage("Deve contenere almeno 8 caratteri");
+
+                return;
+            }
+
+            if (!pass1.equals(pass2)) {
+                registrationForm.getPasswordConfirmField().setInvalid(true);
+                registrationForm.getPasswordConfirmField().setErrorMessage("Le password non sono uguali");
+
+                return;
+            }
+
+            User user = new User();
+
+            UserExtendedData extendedData = new UserExtendedData();
+            extendedData.setEmail(registrationForm.getEmail().getValue());
+            extendedData.setName(registrationForm.getFirstName().getValue());
+            extendedData.setSurname(registrationForm.getLastName().getValue());
+            extendedData.setPhoneNumber(registrationForm.getPhoneNumber().getValue());
+
+            user.setUsername(registrationForm.getEmail().getValue());
+            user.setRoles(Set.of(Role.USER));
+            user.setHashedPassword(new BCryptPasswordEncoder().encode(registrationForm.getPasswordField().getValue()));
+            user.setCreationTs(ZonedDateTime.now().toEpochSecond());
+            user.setExtendedData(new Gson().toJson(extendedData));
+
+            userRepository.save(user);
+
+            Notification.show("Benvenuto su Hike Hunter", 3, Notification.Position.BOTTOM_END);
+
+            UI.getCurrent().navigate(LoginView.class);
+        });
     }
 }

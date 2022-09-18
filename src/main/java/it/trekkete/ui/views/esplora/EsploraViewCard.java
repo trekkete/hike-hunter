@@ -8,10 +8,13 @@ import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import it.trekkete.data.entity.Trip;
 import it.trekkete.data.entity.User;
 import it.trekkete.data.entity.UserExtendedData;
+import it.trekkete.data.service.TripParticipantsRepository;
 import it.trekkete.data.service.UserRepository;
 import it.trekkete.ui.views.unisciti.UniscitiView;
 
@@ -35,7 +38,7 @@ public class EsploraViewCard extends ListItem {
             "https://images.unsplash.com/photo-1562832135-14a35d25edef?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=815&q=80"
     };
 
-    public EsploraViewCard(Trip trip, UserRepository userRepository) {
+    public EsploraViewCard(Trip trip, UserRepository userRepository, TripParticipantsRepository tripParticipantsRepository) {
         addClassNames("bg-contrast-5", "flex", "flex-col", "items-start", "rounded-l");
         getStyle().set("cursor", "pointer");
         setMaxWidth("300px");
@@ -99,7 +102,17 @@ public class EsploraViewCard extends ListItem {
         content.setSpacing(false);
 
         content.addAndExpand(new Span());
-        content.add(generateDifficultyBadge(trip.getRating()));
+
+        HorizontalLayout footer = new HorizontalLayout(generateDifficultyBadge(trip.getRating()));
+        footer.setWidthFull();
+
+        if (trip.getMaxParticipants() != null && trip.getMaxParticipants() > 0) {
+            Span remaining = new Span((trip.getMaxParticipants() - tripParticipantsRepository.countAllByTrip(trip.getId())) + " posti rimanenti");
+            footer.add(remaining);
+            footer.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
+        }
+
+        content.add(footer);
 
         add(div, content);
 
@@ -107,17 +120,6 @@ public class EsploraViewCard extends ListItem {
 
     private String getRandomUrl() {
         return randoms[new Random().nextInt(randoms.length)];
-    }
-
-    private String formatRating(Integer rating) {
-        return switch (rating) {
-            case 1 -> "Molto facile";
-            case 2 -> "Facile";
-            case 3 -> "Media";
-            case 4 -> "Difficile";
-            case 5 -> "Molto difficile";
-            default -> "Difficoltà ignota";
-        };
     }
 
     private String formatDuration(long start, long end) {
@@ -139,7 +141,7 @@ public class EsploraViewCard extends ListItem {
 
         Span badge = new Span();
         badge.getElement().setAttribute("theme", "badge");
-        badge.setText(formatRating(rating));
+        badge.setText(Trip.formatRating(rating));
 
         switch (rating) {
             case 3 -> badge.getStyle().set("background-color", "hsla(47, 100%, 35%, 0.1)").set("color", "hsl(47, 100%, 35%)");

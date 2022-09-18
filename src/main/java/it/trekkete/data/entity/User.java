@@ -3,14 +3,8 @@ package it.trekkete.data.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import it.trekkete.data.Role;
 import java.util.Set;
-import javax.persistence.Column;
-import javax.persistence.ElementCollection;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
-import javax.persistence.Lob;
-import javax.persistence.Table;
+import java.util.UUID;
+import javax.persistence.*;
 
 @Entity
 @Table(name = "user", catalog = "hike_hunter")

@@ -5,17 +5,14 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.OrderedList;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import it.trekkete.data.entity.Trip;
-import it.trekkete.data.entity.User;
 import it.trekkete.data.service.TripParticipantsRepository;
 import it.trekkete.data.service.TripRepository;
 import it.trekkete.data.service.UserRepository;
@@ -24,23 +21,19 @@ import it.trekkete.ui.views.MainLayout;
 import it.trekkete.ui.views.parti.PartiView;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.UUID;
 
-@PageTitle("Esplora")
-@Route(value = "", layout = MainLayout.class)
+@PageTitle("Tutte le escursioni")
+@Route(value = "all-trips", layout = MainLayout.class)
 @AnonymousAllowed
-public class EsploraView extends VerticalLayout {
+public class SearchView extends VerticalLayout {
 
     private final AuthenticatedUser authenticatedUser;
     private final TripRepository tripRepository;
     private final TripParticipantsRepository tripParticipantsRepository;
     private final UserRepository userRepository;
 
-    public EsploraView(@Autowired AuthenticatedUser authenticatedUser,
+    public SearchView(@Autowired AuthenticatedUser authenticatedUser,
                        @Autowired TripRepository tripRepository,
                        @Autowired TripParticipantsRepository tripParticipantsRepository,
                        @Autowired UserRepository userRepository) {
@@ -69,23 +62,22 @@ public class EsploraView extends VerticalLayout {
         headerContainer.setAlignItems(FlexComponent.Alignment.BASELINE);
         headerContainer.setJustifyContentMode(JustifyContentMode.BETWEEN);
 
-        H2 header = new H2("Scopri la montagna e parti all'avventura");
+        H2 header = new H2("Cerca tra tutte le escursioni");
         header.addClassNames("mb-0", "mt-xl", "text-3xl");
         header.getStyle().set("margin-top", "0");
 
-        Button search = new Button("Vedi tutte");
-        search.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        search.addClickListener(click -> {
-            UI.getCurrent().navigate(SearchView.class);
-        });
+        Select<String> sortBy = new Select<>();
+        sortBy.setLabel("Ordina per");
+        sortBy.setItems("Popolarità", "Più recenti", "Meno recenti");
+        sortBy.setValue("Popolarità");
 
-        headerContainer.add(header, search);
+        headerContainer.add(header, sortBy);
 
         List<Trip> trips = tripRepository.findAll();
 
-        for (int i = 0; i < 10; i++) {
+        /*for (int i = 0; i < 10; i++) {
             trips.add(generateRandomTrip());
-        }
+        }*/
 
         VerticalLayout verticalLayout = new VerticalLayout();
         verticalLayout.setPadding(false);
@@ -107,63 +99,19 @@ public class EsploraView extends VerticalLayout {
         }
         else {
 
-            verticalLayout.add(createPlaylist("Le new entry", trips/*tripRepository.findAllByOrderByCreationTsDesc()*/));
-            verticalLayout.add(createPlaylist("Per iniziare", trips.stream().filter(trip -> trip.getRating() == 1).toList()/*tripRepository.findAllByRating(1)*/));
+            HorizontalLayout imageContainer = new HorizontalLayout();
+            imageContainer.setWidthFull();
+            imageContainer.addClassNames("gap-m", "m-0", "list-none", "p-0");
+            imageContainer.getStyle().set("overflow-x", "scroll").set("padding-bottom", "0.5em").set("flex-wrap", "wrap");
 
-            Optional<User> maybeUser = authenticatedUser.get();
-            if (maybeUser.isPresent()) {
-                verticalLayout.add(createPlaylist("Mettiti alla prova", trips));
+            for (Trip t : trips) {
+                imageContainer.add(new EsploraViewCard(t, userRepository, tripParticipantsRepository));
             }
+
+            verticalLayout.add(imageContainer);
         }
 
         container.add(headerContainer, verticalLayout);
         add(container);
-    }
-
-    public VerticalLayout createPlaylist(String title, List<Trip> items) {
-
-        VerticalLayout container = new VerticalLayout();
-        H3 playlistTitle = new H3(title);
-        playlistTitle.getStyle().set("margin-top", "0.5");
-
-        container.setWidthFull();
-        container.setPadding(false);
-        container.setSpacing(false);
-        container.add(playlistTitle);
-
-        HorizontalLayout imageContainer = new HorizontalLayout();
-        imageContainer.setWidthFull();
-        imageContainer.addClassNames("gap-m", "m-0", "list-none", "p-0");
-        imageContainer.getStyle().set("overflow-x", "scroll").set("padding-bottom", "0.5em");
-
-        if (items == null || items.isEmpty()) {
-            H3 empty = new H3("Escursioni finite, torna più tardi");
-            empty.getStyle().set("color", "gray");
-        }
-        else {
-            for (Trip t : items) {
-                imageContainer.add(new EsploraViewCard(t, userRepository, tripParticipantsRepository));
-            }
-        }
-
-        container.add(imageContainer);
-
-        return container;
-    }
-
-    private Trip generateRandomTrip() {
-
-        Trip trip = new Trip();
-        trip.setTitle("Ferrata delle bocchette del brenta");
-        trip.setDescription("Si sale dal percorso 105 e poi si procede costeggiando il fianco dcedlla montagna per un po' fino all'imbocco della ferrata");
-        trip.setId(UUID.randomUUID());
-        trip.setCreator(UUID.fromString("baa08b06-bd6b-4754-bf39-d50b7a6e5750"));
-        trip.setRating(new Random().nextInt(5) + 1);
-        trip.setStartDate(ZonedDateTime.now().minusDays(new Random().nextInt(0, 2)).toEpochSecond());
-        trip.setEndDate(ZonedDateTime.now().toEpochSecond());
-        trip.setCreationTs(ZonedDateTime.now().toEpochSecond());
-        trip.setMaxParticipants(new Random().nextInt(4, 7));
-
-        return trip;
     }
 }

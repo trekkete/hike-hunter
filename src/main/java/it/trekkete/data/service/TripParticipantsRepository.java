@@ -8,4 +8,8 @@ import java.util.UUID;
 
 @Repository
 public interface TripParticipantsRepository extends JpaRepository<TripParticipants, UUID> {
+
+    Integer countAllByTrip(UUID trip);
+
+    Integer countAllByUser(UUID user);
 }
