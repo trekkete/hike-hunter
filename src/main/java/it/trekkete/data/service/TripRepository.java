@@ -13,4 +13,6 @@ public interface TripRepository extends JpaRepository<Trip, UUID> {
     List<Trip> findAllByOrderByCreationTsDesc();
 
     List<Trip> findAllByRating(Integer rating);
+
+    List<Trip> findAllByRatingLessThanEqual(Integer rating);
 }

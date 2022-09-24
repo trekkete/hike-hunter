@@ -17,6 +17,7 @@ import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import it.trekkete.data.entity.User;
 import it.trekkete.data.entity.UserExtendedData;
 import it.trekkete.security.AuthenticatedUser;
+import it.trekkete.ui.views.esplora.ComeFunzionaView;
 import it.trekkete.ui.views.esplora.EsploraView;
 import it.trekkete.ui.views.parti.PartiView;
 
@@ -170,6 +171,7 @@ public class MainLayout extends AppLayout {
         return new MenuItemInfo[]{ //
                 new MenuItemInfo("Esplora", "la la-globe", EsploraView.class), //
                 new MenuItemInfo("Crea un'escursione", "la la-map-marker", PartiView.class), //
+                new MenuItemInfo("Come funziona?", "la la-question", ComeFunzionaView.class), //
         };
     }
 

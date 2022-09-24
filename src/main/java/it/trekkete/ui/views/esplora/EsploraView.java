@@ -5,20 +5,16 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.OrderedList;
+import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import it.trekkete.data.entity.Trip;
 import it.trekkete.data.entity.User;
-import it.trekkete.data.service.TripParticipantsRepository;
-import it.trekkete.data.service.TripRepository;
-import it.trekkete.data.service.UserRepository;
+import it.trekkete.data.service.*;
 import it.trekkete.security.AuthenticatedUser;
 import it.trekkete.ui.views.MainLayout;
 import it.trekkete.ui.views.parti.PartiView;
@@ -39,16 +35,22 @@ public class EsploraView extends VerticalLayout {
     private final TripRepository tripRepository;
     private final TripParticipantsRepository tripParticipantsRepository;
     private final UserRepository userRepository;
+    private final LocationRepository locationRepository;
+    private final TripLocationRepository tripLocationRepository;
 
     public EsploraView(@Autowired AuthenticatedUser authenticatedUser,
                        @Autowired TripRepository tripRepository,
                        @Autowired TripParticipantsRepository tripParticipantsRepository,
-                       @Autowired UserRepository userRepository) {
+                       @Autowired UserRepository userRepository,
+                       @Autowired LocationRepository locationRepository,
+                       @Autowired TripLocationRepository tripLocationRepository) {
 
         this.authenticatedUser = authenticatedUser;
         this.tripRepository = tripRepository;
         this.tripParticipantsRepository = tripParticipantsRepository;
         this.userRepository = userRepository;
+        this.locationRepository = locationRepository;
+        this.tripLocationRepository = tripLocationRepository;
 
         constructUI();
     }
@@ -83,7 +85,7 @@ public class EsploraView extends VerticalLayout {
 
         List<Trip> trips = tripRepository.findAll();
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 3; i++) {
             trips.add(generateRandomTrip());
         }
 
@@ -107,8 +109,8 @@ public class EsploraView extends VerticalLayout {
         }
         else {
 
-            verticalLayout.add(createPlaylist("Le new entry", trips/*tripRepository.findAllByOrderByCreationTsDesc()*/));
-            verticalLayout.add(createPlaylist("Per iniziare", trips.stream().filter(trip -> trip.getRating() == 1).toList()/*tripRepository.findAllByRating(1)*/));
+            verticalLayout.add(createPlaylist("Le new entry", tripRepository.findAllByOrderByCreationTsDesc()));
+            verticalLayout.add(createPlaylist("Per iniziare", tripRepository.findAllByRatingLessThanEqual(2)));
 
             Optional<User> maybeUser = authenticatedUser.get();
             if (maybeUser.isPresent()) {
@@ -137,12 +139,14 @@ public class EsploraView extends VerticalLayout {
         imageContainer.getStyle().set("overflow-x", "scroll").set("padding-bottom", "0.5em");
 
         if (items == null || items.isEmpty()) {
-            H3 empty = new H3("Escursioni finite, torna più tardi");
+            H4 empty = new H4("Escursioni finite, torna più tardi");
             empty.getStyle().set("color", "gray");
+
+            imageContainer.add(empty);
         }
         else {
             for (Trip t : items) {
-                imageContainer.add(new EsploraViewCard(t, userRepository, tripParticipantsRepository));
+                imageContainer.add(new EsploraViewCard(t, userRepository, tripParticipantsRepository, tripLocationRepository, locationRepository));
             }
         }
 

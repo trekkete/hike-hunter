@@ -12,8 +12,11 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import it.trekkete.data.entity.Trip;
+import it.trekkete.data.entity.TripLocation;
 import it.trekkete.data.entity.User;
 import it.trekkete.data.entity.UserExtendedData;
+import it.trekkete.data.service.LocationRepository;
+import it.trekkete.data.service.TripLocationRepository;
 import it.trekkete.data.service.TripParticipantsRepository;
 import it.trekkete.data.service.UserRepository;
 import it.trekkete.ui.views.unisciti.UniscitiView;
@@ -24,6 +27,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
@@ -38,7 +42,11 @@ public class EsploraViewCard extends ListItem {
             "https://images.unsplash.com/photo-1562832135-14a35d25edef?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=815&q=80"
     };
 
-    public EsploraViewCard(Trip trip, UserRepository userRepository, TripParticipantsRepository tripParticipantsRepository) {
+    public EsploraViewCard(Trip trip,
+                           UserRepository userRepository,
+                           TripParticipantsRepository tripParticipantsRepository,
+                           TripLocationRepository tripLocationRepository,
+                           LocationRepository locationRepository) {
         addClassNames("bg-contrast-5", "flex", "flex-col", "items-start", "rounded-l");
         getStyle().set("cursor", "pointer");
         setMaxWidth("300px");
@@ -70,7 +78,7 @@ public class EsploraViewCard extends ListItem {
                 .set("font-size", "small")
                 .set("position", "absolute")
                 .set("bottom", "2px")
-                .set("left", "2px")
+                .set("left", "5px")
                 .set("z-index", "20");
         duration.setText(formatDuration(trip.getStartDate(), trip.getEndDate()));
 
@@ -100,6 +108,16 @@ public class EsploraViewCard extends ListItem {
 
         VerticalLayout content = new VerticalLayout(header, subtitle);
         content.setSpacing(false);
+
+        Span locations = new Span();
+        List<TripLocation> tripLocations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
+        if (tripLocations.size() == 1) {
+            locations.setText(locationRepository.findLocationById(tripLocations.get(0).getLocation()).getName());
+        }
+        else {
+            locations.setText(tripLocations.size() + " itinerari");
+        }
+        content.add(locations);
 
         content.addAndExpand(new Span());
 

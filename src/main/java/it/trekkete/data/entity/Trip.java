@@ -1,5 +1,7 @@
 package it.trekkete.data.entity;
 
+import org.hibernate.annotations.Type;
+
 import javax.persistence.Entity;
 import javax.persistence.Table;
 import java.util.UUID;
@@ -16,6 +18,7 @@ public class Trip extends AbstractEntity {
     private Long startDate;
     private Long endDate;
 
+    @Type(type = "uuid-char")
     private UUID creator;
 
     private Integer rating;

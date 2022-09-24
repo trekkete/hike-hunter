@@ -13,9 +13,7 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import it.trekkete.data.entity.Trip;
-import it.trekkete.data.service.TripParticipantsRepository;
-import it.trekkete.data.service.TripRepository;
-import it.trekkete.data.service.UserRepository;
+import it.trekkete.data.service.*;
 import it.trekkete.security.AuthenticatedUser;
 import it.trekkete.ui.views.MainLayout;
 import it.trekkete.ui.views.parti.PartiView;
@@ -32,16 +30,22 @@ public class SearchView extends VerticalLayout {
     private final TripRepository tripRepository;
     private final TripParticipantsRepository tripParticipantsRepository;
     private final UserRepository userRepository;
+    private final LocationRepository locationRepository;
+    private final TripLocationRepository tripLocationRepository;
 
     public SearchView(@Autowired AuthenticatedUser authenticatedUser,
                        @Autowired TripRepository tripRepository,
                        @Autowired TripParticipantsRepository tripParticipantsRepository,
-                       @Autowired UserRepository userRepository) {
+                       @Autowired UserRepository userRepository,
+                      @Autowired LocationRepository locationRepository,
+                      @Autowired TripLocationRepository tripLocationRepository) {
 
         this.authenticatedUser = authenticatedUser;
         this.tripRepository = tripRepository;
         this.tripParticipantsRepository = tripParticipantsRepository;
         this.userRepository = userRepository;
+        this.locationRepository = locationRepository;
+        this.tripLocationRepository = tripLocationRepository;
 
         constructUI();
     }
@@ -105,7 +109,7 @@ public class SearchView extends VerticalLayout {
             imageContainer.getStyle().set("overflow-x", "scroll").set("padding-bottom", "0.5em").set("flex-wrap", "wrap");
 
             for (Trip t : trips) {
-                imageContainer.add(new EsploraViewCard(t, userRepository, tripParticipantsRepository));
+                imageContainer.add(new EsploraViewCard(t, userRepository, tripParticipantsRepository, tripLocationRepository, locationRepository));
             }
 
             verticalLayout.add(imageContainer);
