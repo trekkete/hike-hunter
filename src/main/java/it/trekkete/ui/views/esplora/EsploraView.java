@@ -146,7 +146,7 @@ public class EsploraView extends VerticalLayout {
         }
         else {
             for (Trip t : items) {
-                imageContainer.add(new EsploraViewCard(t, userRepository, tripParticipantsRepository, tripLocationRepository, locationRepository));
+                imageContainer.add(new EsploraViewCard(t, authenticatedUser, userRepository, tripParticipantsRepository, tripLocationRepository, locationRepository));
             }
         }
 

@@ -8,9 +8,12 @@ import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.RouteParameters;
 import it.trekkete.data.entity.Trip;
 import it.trekkete.data.entity.TripLocation;
 import it.trekkete.data.entity.User;
@@ -19,6 +22,7 @@ import it.trekkete.data.service.LocationRepository;
 import it.trekkete.data.service.TripLocationRepository;
 import it.trekkete.data.service.TripParticipantsRepository;
 import it.trekkete.data.service.UserRepository;
+import it.trekkete.security.AuthenticatedUser;
 import it.trekkete.ui.views.unisciti.UniscitiView;
 
 import java.time.Duration;
@@ -43,6 +47,7 @@ public class EsploraViewCard extends ListItem {
     };
 
     public EsploraViewCard(Trip trip,
+                           AuthenticatedUser authenticatedUser,
                            UserRepository userRepository,
                            TripParticipantsRepository tripParticipantsRepository,
                            TripLocationRepository tripLocationRepository,
@@ -103,7 +108,7 @@ public class EsploraViewCard extends ListItem {
         subtitle.add(getCreatorInfo(trip.getCreator(), userRepository));
 
         addClickListener(click -> {
-           UI.getCurrent().navigate(UniscitiView.class);
+           UI.getCurrent().navigate(UniscitiView.class, new RouteParameters("tripId", String.valueOf(trip.getId())));
         });
 
         VerticalLayout content = new VerticalLayout(header, subtitle);
@@ -123,11 +128,22 @@ public class EsploraViewCard extends ListItem {
 
         HorizontalLayout footer = new HorizontalLayout(generateDifficultyBadge(trip.getRating()));
         footer.setWidthFull();
+        footer.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
 
-        if (trip.getMaxParticipants() != null && trip.getMaxParticipants() > 0) {
-            Span remaining = new Span((trip.getMaxParticipants() - tripParticipantsRepository.countAllByTrip(trip.getId())) + " posti rimanenti");
-            footer.add(remaining);
-            footer.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
+        boolean isAuthenticated = authenticatedUser.get().isPresent();
+
+        if (isAuthenticated && tripParticipantsRepository.findByTripAndUser(trip.getId(), authenticatedUser.get().get().getId()) != null) {
+            Icon icon = new Icon(VaadinIcon.CHECK_CIRCLE);
+            icon.setColor("var(--lumo-primary-color)");
+
+            Span span = new Span(icon);
+            footer.add(span);
+        }
+        else {
+            if (trip.getMaxParticipants() != null && trip.getMaxParticipants() > 0) {
+                Span remaining = new Span((trip.getMaxParticipants() - tripParticipantsRepository.countAllByTrip(trip.getId())) + " posti rimanenti");
+                footer.add(remaining);
+            }
         }
 
         content.add(footer);

@@ -96,8 +96,9 @@ public class MainLayout extends AppLayout {
         layout.addClassNames("flex", "items-center", "px-l");
 
         H1 appName = new H1("hike-hunter");
-        appName.addClassNames("my-m", "me-auto", "text-l");
-        layout.setMinWidth("200px");
+        appName.getStyle().set("white-space", "nowrap");
+        appName.addClassNames("my-m", "me-auto");
+        layout.getStyle().set("margin", "0em 1em");
         layout.add(appName);
 
         Nav nav = new Nav();
@@ -151,11 +152,11 @@ public class MainLayout extends AppLayout {
 
             });
 
-            userMenu.setMinWidth("200px");
+            userMenu.getStyle().set("margin", "0em 1em");
             header.add(userMenu);
         } else {
             FlexLayout authDiv = new FlexLayout();
-            authDiv.setMinWidth("200px");
+            authDiv.getStyle().set("margin", "0em 1em").set("gap", "1em");
             authDiv.setJustifyContentMode(FlexComponent.JustifyContentMode.EVENLY);
             Anchor registerLink = new Anchor("register", "Registrati");
             Anchor loginLink = new Anchor("login", "Accedi");

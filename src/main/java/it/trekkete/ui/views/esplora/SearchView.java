@@ -109,7 +109,7 @@ public class SearchView extends VerticalLayout {
             imageContainer.getStyle().set("overflow-x", "scroll").set("padding-bottom", "0.5em").set("flex-wrap", "wrap");
 
             for (Trip t : trips) {
-                imageContainer.add(new EsploraViewCard(t, userRepository, tripParticipantsRepository, tripLocationRepository, locationRepository));
+                imageContainer.add(new EsploraViewCard(t, authenticatedUser, userRepository, tripParticipantsRepository, tripLocationRepository, locationRepository));
             }
 
             verticalLayout.add(imageContainer);
