@@ -85,10 +85,6 @@ public class EsploraView extends VerticalLayout {
 
         List<Trip> trips = tripRepository.findAll();
 
-        for (int i = 0; i < 3; i++) {
-            trips.add(generateRandomTrip());
-        }
-
         VerticalLayout verticalLayout = new VerticalLayout();
         verticalLayout.setPadding(false);
 
@@ -126,7 +122,7 @@ public class EsploraView extends VerticalLayout {
 
         VerticalLayout container = new VerticalLayout();
         H3 playlistTitle = new H3(title);
-        playlistTitle.getStyle().set("margin-top", "0.5");
+        playlistTitle.getStyle().set("margin-top", "0.5").set("padding-left", "0.3em");
 
         container.setWidthFull();
         container.setPadding(false);
@@ -136,7 +132,7 @@ public class EsploraView extends VerticalLayout {
         HorizontalLayout imageContainer = new HorizontalLayout();
         imageContainer.setWidthFull();
         imageContainer.addClassNames("gap-m", "m-0", "list-none", "p-0");
-        imageContainer.getStyle().set("overflow-x", "scroll").set("padding-bottom", "0.5em");
+        imageContainer.getStyle().set("overflow-x", "scroll").set("padding", "0 0 1em 0.5em");
 
         if (items == null || items.isEmpty()) {
             H4 empty = new H4("Escursioni finite, torna più tardi");

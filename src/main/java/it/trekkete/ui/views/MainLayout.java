@@ -2,6 +2,7 @@ package it.trekkete.ui.views;
 
 import com.google.gson.Gson;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.contextmenu.MenuItem;
@@ -20,6 +21,7 @@ import it.trekkete.security.AuthenticatedUser;
 import it.trekkete.ui.views.esplora.ComeFunzionaView;
 import it.trekkete.ui.views.esplora.EsploraView;
 import it.trekkete.ui.views.parti.PartiView;
+import it.trekkete.ui.views.parti.YourTripView;
 
 import java.io.ByteArrayInputStream;
 import java.util.Optional;
@@ -145,12 +147,13 @@ public class MainLayout extends AppLayout {
             div.getElement().getStyle().set("align-items", "center");
             div.getElement().getStyle().set("gap", "var(--lumo-space-s)");
             userName.add(div);
+            userName.getSubMenu().addItem("Il tuo profilo", e -> {
+                UI.getCurrent().navigate(YourTripView.class);
+            });
             userName.getSubMenu().addItem("Sign out", e -> {
                 authenticatedUser.logout();
             });
-            userName.getSubMenu().addItem("I tuoi viaggi", e -> {
 
-            });
 
             userMenu.getStyle().set("margin", "0em 1em");
             header.add(userMenu);

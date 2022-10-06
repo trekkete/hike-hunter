@@ -11,6 +11,8 @@ import java.util.UUID;
 @Repository
 public interface TripRepository extends JpaRepository<Trip, UUID> {
 
+    Trip findTripById(UUID id);
+
     List<Trip> findAllByOrderByCreationTsDesc();
 
     List<Trip> findAllByRating(Integer rating);
