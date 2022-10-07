@@ -52,11 +52,7 @@ public class SearchView extends VerticalLayout {
 
     private void constructUI() {
         getStyle()
-                .set("background-image", "url('https://images.unsplash.com/photo-1502751106709-b3812c57da19?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1332&q=80')")
-                .set("background-repeat", "no-repeat")
-                .set("background-size", "cover");
-
-        setHeightFull();
+                .set("background-image", "url('images/background.png')");
 
         VerticalLayout container = new VerticalLayout();
         container.addClassNames("esplora-view", "main-container");

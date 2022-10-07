@@ -100,4 +100,15 @@ public class Trip extends AbstractEntity {
         };
     }
 
+    public Long getXp() {
+        return switch (rating) {
+            case 1 -> 40L;
+            case 2 -> 50L;
+            case 3 -> 70L;
+            case 4 -> 100L;
+            case 5 -> 150L;
+            default -> 0L;
+        };
+    }
+
 }

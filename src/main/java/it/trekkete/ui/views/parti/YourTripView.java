@@ -1,10 +1,9 @@
 package it.trekkete.ui.views.parti;
 
 import com.google.gson.Gson;
-import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
@@ -13,6 +12,7 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.StreamResource;
 import it.trekkete.data.entity.Trip;
+import it.trekkete.data.entity.TripParticipants;
 import it.trekkete.data.entity.User;
 import it.trekkete.data.entity.UserExtendedData;
 import it.trekkete.data.service.*;
@@ -56,11 +56,10 @@ public class YourTripView extends VerticalLayout {
 
         User user = authenticatedUser.get().get();
 
+        Long xp = 0L;
+
         getStyle()
-                .set("background-image", "url('https://images.unsplash.com/photo-1502751106709-b3812c57da19?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1332&q=80')")
-                .set("background-repeat", "no-repeat")
-                .set("background-size", "cover");
-        setHeightFull();
+                .set("background-image", "url('images/background.png')");
 
         VerticalLayout container = new VerticalLayout();
         container.addClassNames("esplora-view", "main-container");
@@ -68,6 +67,11 @@ public class YourTripView extends VerticalLayout {
         add(container);
 
         List<Trip> trips = tripParticipantsRepository.findAllByUser(user.getId()).stream().map(tripParticipants -> tripRepository.findTripById(tripParticipants.getTrip())).toList();
+        List<Trip> tripsWithValue = tripParticipantsRepository.findAllByUserAndStatus(user.getId(), TripParticipants.Status.OK).stream().map(tripParticipants -> tripRepository.findTripById(tripParticipants.getTrip())).toList();
+
+        for(Trip value : tripsWithValue) {
+            xp += value.getXp();
+        }
 
         HorizontalLayout infos = new HorizontalLayout();
         infos.setWidthFull();
@@ -91,7 +95,7 @@ public class YourTripView extends VerticalLayout {
         H3 levelLabel = new H3("Livello");
         levelLabel.getStyle().set("color", "gray");
         levelLabel.getStyle().set("margin", "0");
-        H1 level = new H1(String.valueOf(user.getLevel()));
+        H1 level = new H1(String.valueOf(user.getLevel(xp)));
         level.getStyle().set("margin", "0");
 
         HorizontalLayout nameLayout = new HorizontalLayout(nameLabel, name);
@@ -102,12 +106,12 @@ public class YourTripView extends VerticalLayout {
         levelLayout.setAlignItems(Alignment.BASELINE);
 
         Div progressBarLabel = new Div();
-        progressBarLabel.setText(user.getXp() + "/" + user.getMaxXp());
+        progressBarLabel.setText(xp + "/" + user.getMaxXp(xp));
 
         ProgressBar progressBar = new ProgressBar();
         progressBar.setMin(0);
-        progressBar.setMax(user.getMaxXp());
-        progressBar.setValue(user.getXp());
+        progressBar.setMax(user.getMaxXp(xp));
+        progressBar.setValue(xp);
         progressBar.addThemeVariants(ProgressBarVariant.LUMO_SUCCESS);
 
         VerticalLayout progressBarLayout = new VerticalLayout(progressBarLabel, progressBar);
@@ -148,5 +152,37 @@ public class YourTripView extends VerticalLayout {
         infos.add(image, new VerticalLayout(nameAndLevel, tripsAndRatings));
 
         container.add(infos);
+
+        VerticalLayout tripContainer = new VerticalLayout();
+        tripContainer.addClassNames("esplora-view", "main-container");
+
+        for (Trip trip : trips) {
+            tripContainer.add(createTripLayout(trip));
+        }
+
+        add(tripContainer);
+    }
+
+    private Component createTripLayout(Trip trip) {
+
+        HorizontalLayout container = new HorizontalLayout();
+        container.setWidthFull();
+        container.setAlignItems(Alignment.BASELINE);
+        container.setJustifyContentMode(JustifyContentMode.BETWEEN);
+
+        H4 title = new H4(trip.getTitle());
+        title.addClassNames("m-0");
+
+        container.add(title);
+
+        Button review = new Button("Lascia una recensione");
+        review.addClickListener(click -> {
+
+
+        });
+
+        container.add(review);
+
+        return container;
     }
 }

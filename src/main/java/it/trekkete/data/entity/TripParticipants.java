@@ -2,16 +2,18 @@ package it.trekkete.data.entity;
 
 import org.hibernate.annotations.Type;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.IdClass;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.util.UUID;
 
 @Entity
 @Table(name = "trip_participants", catalog = "hike_hunter")
 @IdClass(TripParticipantsKey.class)
 public class TripParticipants {
+
+    public enum Status {
+        OK,
+        KO
+    }
 
     @Id
     @Type(type = "uuid-char")
@@ -20,6 +22,8 @@ public class TripParticipants {
     @Id
     @Type(type = "uuid-char")
     private UUID user;
+
+    private Status status;
 
     public UUID getTrip() {
         return trip;
@@ -35,5 +39,13 @@ public class TripParticipants {
 
     public void setUser(UUID user) {
         this.user = user;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
     }
 }

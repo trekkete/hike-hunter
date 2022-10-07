@@ -14,9 +14,13 @@ public interface TripParticipantsRepository extends JpaRepository<TripParticipan
 
     Integer countAllByUser(UUID user);
 
+    Integer countAllByUserAndStatus(UUID user, TripParticipants.Status status);
+
     List<TripParticipants> findAllByTrip(UUID trip);
 
     List<TripParticipants> findAllByUser(UUID trip);
+
+    List<TripParticipants> findAllByUserAndStatus(UUID user, TripParticipants.Status status);
 
     TripParticipants findByTripAndUser(UUID trip, UUID user);
 }

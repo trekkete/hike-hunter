@@ -29,9 +29,6 @@ public class User extends AbstractEntity {
     @Column(columnDefinition = "text default null")
     private String extendedData;
 
-    @Column(nullable = false)
-    private Long xp;
-
     public String getUsername() {
         return username;
     }
@@ -80,21 +77,13 @@ public class User extends AbstractEntity {
         this.extendedData = extendedData;
     }
 
-    public Long getXp() {
-        return xp;
-    }
-
-    public void setXp(Long xp) {
-        this.xp = xp;
-    }
-
-    public Integer getLevel() {
+    public Integer getLevel(Long xp) {
         return (int) Math.ceil(Math.sqrt(xp * 2)) + 1;
     }
 
-    public Integer getMaxXp() {
+    public Integer getMaxXp(Long xp) {
 
-        Integer level = getLevel();
+        Integer level = getLevel(xp);
 
         return (level * (level + 1)) / 2 * 100;
     }

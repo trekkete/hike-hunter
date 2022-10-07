@@ -43,13 +43,13 @@ public class MainLayout extends AppLayout {
             RouterLink link = new RouterLink();
             // Use Lumo classnames for various styling
             link.addClassNames("flex", "gap-xs", "h-m", "items-center", "px-s", "text-body");
-            link.getStyle().set("margin", "1em");
+            link.getStyle().set("margin", "1em").set("align-items", "baseline");
             link.setRoute(view);
 
             Span text = new Span(menuTitle);
             // Use Lumo classnames for various styling
-            text.addClassNames("font-medium", "text-m", "whitespace-nowrap");
-            text.getStyle().set("text-transform", "uppercase");
+            text.addClassNames("whitespace-nowrap");
+            text.getStyle().set("font-size", "1.5em");
 
             link.add(new LineAwesomeIcon(iconClass), text);
             add(link);
@@ -173,9 +173,9 @@ public class MainLayout extends AppLayout {
 
     private MenuItemInfo[] createMenuItems() {
         return new MenuItemInfo[]{ //
-                new MenuItemInfo("Esplora", "la la-globe", EsploraView.class), //
-                new MenuItemInfo("Crea un'escursione", "la la-map-marker", PartiView.class), //
-                new MenuItemInfo("Come funziona?", "la la-question", ComeFunzionaView.class), //
+                new MenuItemInfo("esplora", "la la-globe", EsploraView.class), //
+                new MenuItemInfo("crea un'escursione", "la la-map-marker", PartiView.class), //
+                new MenuItemInfo("come funziona?", "la la-question", ComeFunzionaView.class), //
         };
     }
 
