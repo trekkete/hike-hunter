@@ -43,10 +43,10 @@ public class ComeFunzionaView extends VerticalLayout {
             one.getStyle().set("background-color", "white")
                     .set("justify-content", "end");
             h4.getStyle().set("color", "black")
-                    .set("margin-right", "4em");
+                    .set("margin", "0 0 0 4em");
         }
         else {
-            h4.getStyle().set("margin-left", "4em");
+            h4.getStyle().set("margin", "0 4em 0 0");
         }
 
         one.add(h4);

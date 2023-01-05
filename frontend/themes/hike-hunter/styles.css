@@ -69,7 +69,7 @@ html {
     align-items: center;
     background-color: hsl(125, 40%, 39%);
     width: 100%;
-    min-height: 200px;
+    min-height: 100px;
     max-height: 200px;
     box-shadow: rgba(0, 0, 0, 0.4) 0px 2px 4px, rgba(0, 0, 0, 0.3) 0px 7px 13px -3px, rgba(0, 0, 0, 0.2) 0px -3px 0px inset;
     border-radius: var(--lumo-border-radius);
