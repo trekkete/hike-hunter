@@ -4,13 +4,14 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.H4;
+import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -36,16 +37,14 @@ import it.trekkete.ui.views.esplora.EsploraView;
 import it.trekkete.utils.MapUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import software.xdev.vaadin.maps.leaflet.flow.LMap;
-import software.xdev.vaadin.maps.leaflet.flow.data.LCenter;
+import software.xdev.vaadin.maps.leaflet.flow.data.LMarker;
 import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
 
 import javax.annotation.security.PermitAll;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @PageTitle("Parti")
 @Route(value = "new-trip", layout = MainLayout.class)
@@ -71,6 +70,7 @@ public class PartiView extends VerticalLayout {
     private Grid<Location> locationGrid;
 
     private List<Location> gridItems;
+    private Map<Location, LMarker> markerMap;
 
     private Button cancel = new Button("Cancel");
     private Button save = new Button("Save");
@@ -83,6 +83,7 @@ public class PartiView extends VerticalLayout {
 
         this.locationRepository = locationRepository;
         this.gridItems = new ArrayList<>();
+        this.markerMap = new HashMap<>();
 
         addClassName("parti-view");
         getStyle()
@@ -219,25 +220,53 @@ public class PartiView extends VerticalLayout {
 
         formLayout.add(rating, maxNumber);
 
+        H4 optionsTitle = new H4("Materiale richiesto");
+
+        HorizontalLayout optionLayout = new HorizontalLayout();
+        optionLayout.setWidthFull();
+        optionLayout.setAlignItems(Alignment.CENTER);
+        optionLayout.setJustifyContentMode(JustifyContentMode.CENTER);
+
+        optionLayout.add(createOptionLayout("shoes"));
+        optionLayout.add(createOptionLayout("harness"));
+        optionLayout.add(createOptionLayout("helmet"));
+        optionLayout.add(createOptionLayout("kit"));
+        optionLayout.add(createOptionLayout("picozza"));
+        optionLayout.add(createOptionLayout("rope"));
+        optionLayout.add(createOptionLayout("crampons"));
+        optionLayout.add(createOptionLayout("snowshoes"));
+
+        formLayout.add(optionsTitle, 2);
+        formLayout.add(optionLayout, 2);
+
         H4 itinerari = new H4("Aggiungi itinerari");
 
         searchLocation = new TextField();
         searchLocation.setValueChangeMode(ValueChangeMode.EAGER);
         searchLocation.setPlaceholder("Cerca un itinerario");
         searchLocation.getStyle().set("padding", "0");
+        searchLocation.getStyle().set("margin-bottom", "1em");
 
         Grid<Location> searchResultsGrid = new Grid<>();
         searchResultsGrid.setWidthFull();
         searchResultsGrid.setAllRowsVisible(true);
+        searchResultsGrid.setVisible(false);
         searchResultsGrid.addColumn(Location::getName).setHeader("Fai doppio-click sull'itinerario da aggiungere");
         searchResultsGrid.addThemeVariants(GridVariant.LUMO_COMPACT);
         searchResultsGrid.addItemDoubleClickListener(click -> {
             Location clickItem = click.getItem();
 
+            locationRepository.save(clickItem);
+
             gridItems.add(clickItem);
             locationGrid.setItems(gridItems);
 
-            map.setViewPoint(MapUtils.getCenteredViewpoint(gridItems.toArray(new Location[0])));
+            MapUtils.fitBounds(map, gridItems.toArray(new Location[0]));
+
+            LMarker marker = new LMarker(clickItem.getLatitude(), clickItem.getLongitude());
+
+            map.addLComponents(marker);
+            markerMap.put(clickItem, marker);
 
             searchLocation.clear();
         });
@@ -262,7 +291,7 @@ public class PartiView extends VerticalLayout {
 
         map = new LMap(45, 10, 7);
         map.setTileLayer(LTileLayer.DEFAULT_OPENSTREETMAP_TILE);
-
+        map.getElement().executeJs("this.map.options.minZoom = 6;");
         map.setSizeFull();
 
         VerticalLayout mapContainer = new VerticalLayout(map);
@@ -284,7 +313,8 @@ public class PartiView extends VerticalLayout {
                 gridItems.remove(location);
                 locationGrid.setItems(gridItems);
 
-                map.setViewPoint(MapUtils.getCenteredViewpoint(gridItems.toArray(new Location[0])));
+                MapUtils.fitBounds(map, gridItems.toArray(new Location[0]));
+                map.removeLComponents(markerMap.get(location));
 
             });
 
@@ -308,6 +338,38 @@ public class PartiView extends VerticalLayout {
         buttonLayout.add(save);
         buttonLayout.add(cancel);
         return buttonLayout;
+    }
+
+    private Component createOptionLayout(String option) {
+
+        VerticalLayout optionLayout = new VerticalLayout();
+        optionLayout.addClassNames("option-layout", "deselected");
+
+        Image deselected = new Image("images/" + option + "-deselected.png", option + "-deselected");
+        Image selected = new Image("images/" + option + "-selected.png", option + "-selected");
+
+        optionLayout.add(deselected);
+
+        optionLayout.addClickListener(click -> {
+
+            optionLayout.removeAll();
+            if (optionLayout.hasClassName("deselected")) {
+                optionLayout.removeClassName("deselected");
+                optionLayout.addClassName("selected");
+
+                optionLayout.add(selected);
+            }
+            else if (optionLayout.hasClassName("selected")) {
+                optionLayout.removeClassName("selected");
+                optionLayout.addClassName("deselected");
+
+                optionLayout.add(deselected);
+            }
+        });
+
+        optionLayout.getElement().setAttribute("title", option);
+
+        return optionLayout;
     }
 
     private boolean validateForm() {

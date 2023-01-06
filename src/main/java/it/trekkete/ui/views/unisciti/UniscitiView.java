@@ -27,7 +27,11 @@ import it.trekkete.data.service.TripRepository;
 import it.trekkete.security.AuthenticatedUser;
 import it.trekkete.ui.views.MainLayout;
 import it.trekkete.ui.views.esplora.EsploraView;
+import it.trekkete.utils.MapUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import software.xdev.vaadin.maps.leaflet.flow.LMap;
+import software.xdev.vaadin.maps.leaflet.flow.data.LMarker;
+import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
 
 import javax.annotation.security.PermitAll;
 import java.util.List;
@@ -81,23 +85,37 @@ public class UniscitiView extends VerticalLayout implements BeforeEnterObserver 
         title.getStyle().set("margin-top", "0");
 
         H4 descriptionTitle = new H4("Descrizione");
+        descriptionTitle.getStyle().set("margin-top", "0");
         descriptionTitle.getStyle().set("color", "var(--lumo-contrast-30pct");
-        Text desc = new Text(trip.getDescription());
+
+        Span desc = new Span(trip.getDescription());
 
         container.add(title, descriptionTitle, desc);
+
+        HorizontalLayout locationsMapContainer = new HorizontalLayout();
+        locationsMapContainer.setWidthFull();
+        locationsMapContainer.setMinHeight("400px");
 
         VerticalLayout locationsContainer = new VerticalLayout();
         locationsContainer.setPadding(false);
         locationsContainer.setSpacing(false);
         List<TripLocation> tripLocations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
-        for (int i = 0; i < tripLocations.size(); i++) {
+        List<Location> locations = tripLocations.stream().map(tripLocation -> locationRepository.findLocationById(tripLocation.getLocation())).toList();
+
+        LMap map = new LMap();
+        map.setTileLayer(LTileLayer.DEFAULT_OPENSTREETMAP_TILE);
+        map.getElement().executeJs("this.map.options.minZoom = 6;");
+        map.setSizeFull();
+
+        for (int i = 0; i < locations.size(); i++) {
 
             H4 temp = new H4("Tappa #" + i + ":");
             temp.getStyle().set("margin-top", "0");
 
-            Location location = locationRepository.findLocationById(tripLocations.get(i).getLocation());
+            LMarker locationMarker = new LMarker(locations.get(i).getLatitude(), locations.get(i).getLongitude());
+            map.addLComponents(locationMarker);
 
-            Span span = new Span(location.getName());
+            Span span = new Span(locations.get(i).getName());
 
             HorizontalLayout horizontalLayout = new HorizontalLayout(temp, span);
             horizontalLayout.setAlignItems(Alignment.BASELINE);
@@ -105,7 +123,10 @@ public class UniscitiView extends VerticalLayout implements BeforeEnterObserver 
             locationsContainer.add(horizontalLayout);
         }
 
-        container.add(locationsContainer);
+        MapUtils.fitBounds(map, locations.toArray(new Location[0]));
+
+        locationsMapContainer.add(locationsContainer, map);
+        container.add(locationsMapContainer);
 
         Button join = new Button(alreadySubscribed ? "Annulla partecipazione" : "Partecipa");
         join.addThemeVariants(ButtonVariant.LUMO_PRIMARY);

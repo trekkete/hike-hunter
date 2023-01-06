@@ -15,8 +15,7 @@ public class TripLocation {
     private UUID trip;
 
     @Id
-    @Type(type = "uuid-char")
-    private UUID location;
+    private String location;
 
     @Column(name = "idx")
     private Integer index;
@@ -29,11 +28,11 @@ public class TripLocation {
         this.trip = trip;
     }
 
-    public UUID getLocation() {
+    public String getLocation() {
         return location;
     }
 
-    public void setLocation(UUID location) {
+    public void setLocation(String location) {
         this.location = location;
     }
 

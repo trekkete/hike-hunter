@@ -7,7 +7,7 @@ import java.util.UUID;
 public class TripLocationKey implements Serializable {
 
     private UUID trip;
-    private UUID location;
+    private String location;
     private int index;
 
     @Override

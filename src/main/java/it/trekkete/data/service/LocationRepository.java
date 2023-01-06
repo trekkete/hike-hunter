@@ -11,5 +11,5 @@ public interface LocationRepository extends JpaRepository<Location, UUID> {
 
     Location findLocationByName(String name);
 
-    Location findLocationById(UUID uuid);
+    Location findLocationById(String id);
 }
