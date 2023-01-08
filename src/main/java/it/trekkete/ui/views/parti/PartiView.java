@@ -1,5 +1,7 @@
 package it.trekkete.ui.views.parti;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -72,6 +74,8 @@ public class PartiView extends VerticalLayout {
     private List<Location> gridItems;
     private Map<Location, LMarker> markerMap;
 
+    private Map<String, String> equipmentMap;
+
     private Button cancel = new Button("Cancel");
     private Button save = new Button("Save");
 
@@ -84,10 +88,11 @@ public class PartiView extends VerticalLayout {
         this.locationRepository = locationRepository;
         this.gridItems = new ArrayList<>();
         this.markerMap = new HashMap<>();
+        this.equipmentMap = new HashMap<>();
 
         addClassName("parti-view");
-        getStyle()
-                .set("background-image", "url('images/background.png')");
+        //getStyle().set("background-image", "url('images/background.png')");
+        getStyle().set("background-color", "#00680082");
 
         VerticalLayout container = new VerticalLayout();
         container.addClassNames("esplora-view", "main-container");
@@ -108,6 +113,8 @@ public class PartiView extends VerticalLayout {
             newTrip.setCreationTs(ZonedDateTime.now().toEpochSecond());
 
             newTrip.setRating(rating.getValue());
+
+            newTrip.setEquipment(new Gson().toJson(equipmentMap));
 
             if (maxNumber.getValue() != null && !maxNumber.isEmpty())
                 newTrip.setMaxParticipants(Integer.parseInt(maxNumber.getValue()));
@@ -357,11 +364,15 @@ public class PartiView extends VerticalLayout {
                 optionLayout.removeClassName("deselected");
                 optionLayout.addClassName("selected");
 
+                equipmentMap.put(option, "true");
+
                 optionLayout.add(selected);
             }
             else if (optionLayout.hasClassName("selected")) {
                 optionLayout.removeClassName("selected");
                 optionLayout.addClassName("deselected");
+
+                equipmentMap.put(option, "false");
 
                 optionLayout.add(deselected);
             }

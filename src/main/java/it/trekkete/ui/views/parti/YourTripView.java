@@ -58,8 +58,8 @@ public class YourTripView extends VerticalLayout {
 
         Long xp = 0L;
 
-        getStyle()
-                .set("background-image", "url('images/background.png')");
+        //getStyle().set("background-image", "url('images/background.png')");
+        getStyle().set("background-color", "#00680082");
 
         VerticalLayout container = new VerticalLayout();
         container.addClassNames("esplora-view", "main-container");

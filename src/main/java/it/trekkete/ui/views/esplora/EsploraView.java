@@ -56,9 +56,8 @@ public class EsploraView extends VerticalLayout {
     }
 
     private void constructUI() {
-        getStyle()
-                .set("background-image", "url('images/background.png')")
-                .set("background-repeat", "repeat");
+        //getStyle().set("background-image", "url('images/background.png')");
+        getStyle().set("background-color", "#00680082");
 
         VerticalLayout container = new VerticalLayout();
         container.addClassNames("esplora-view", "main-container");

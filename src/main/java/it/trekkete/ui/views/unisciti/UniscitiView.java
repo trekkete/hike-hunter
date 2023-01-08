@@ -1,16 +1,12 @@
 package it.trekkete.ui.views.unisciti;
 
-import com.vaadin.flow.component.AttachEvent;
-import com.vaadin.flow.component.ComponentEventListener;
-import com.vaadin.flow.component.Text;
-import com.vaadin.flow.component.UI;
+import com.google.gson.Gson;
+import com.googlecode.gentyref.TypeToken;
+import com.vaadin.flow.component.*;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
-import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H4;
-import com.vaadin.flow.component.html.Label;
-import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -25,16 +21,27 @@ import it.trekkete.data.service.TripLocationRepository;
 import it.trekkete.data.service.TripParticipantsRepository;
 import it.trekkete.data.service.TripRepository;
 import it.trekkete.security.AuthenticatedUser;
+import it.trekkete.ui.components.Separator;
 import it.trekkete.ui.views.MainLayout;
 import it.trekkete.ui.views.esplora.EsploraView;
 import it.trekkete.utils.MapUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import software.xdev.vaadin.maps.leaflet.flow.LMap;
+import software.xdev.vaadin.maps.leaflet.flow.data.LIcon;
 import software.xdev.vaadin.maps.leaflet.flow.data.LMarker;
+import software.xdev.vaadin.maps.leaflet.flow.data.LMarkerOptions;
 import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
 
 import javax.annotation.security.PermitAll;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @PageTitle("Dettaglio escursione")
@@ -68,10 +75,8 @@ public class UniscitiView extends VerticalLayout implements BeforeEnterObserver 
 
         User user = authenticatedUser.get().get();
 
-        getStyle()
-                .set("background-image", "url('images/background.png')");
-
-        setHeightFull();
+        //getStyle().set("background-image", "url('images/background.png')");
+        getStyle().set("background-color", "#00680082");
 
         VerticalLayout container = new VerticalLayout();
         container.addClassNames("esplora-view", "main-container");
@@ -81,16 +86,31 @@ public class UniscitiView extends VerticalLayout implements BeforeEnterObserver 
         if (trip == null)
             return;
 
+        HorizontalLayout header = new HorizontalLayout();
+        header.addClassName("unisciti-view-header");
+
+        VerticalLayout headerInfo = new VerticalLayout();
+        headerInfo.setPadding(false);
+        headerInfo.setWidthFull();
+
         H2 title = new H2(trip.getTitle());
         title.getStyle().set("margin-top", "0");
 
-        H4 descriptionTitle = new H4("Descrizione");
-        descriptionTitle.getStyle().set("margin-top", "0");
-        descriptionTitle.getStyle().set("color", "var(--lumo-contrast-30pct");
-
         Span desc = new Span(trip.getDescription());
+        desc.addClassName("description");
 
-        container.add(title, descriptionTitle, desc);
+        headerInfo.add(title, desc);
+
+        header.add(headerInfo, new Separator(Separator.Orientation.VERTICAL), createDateInfo());
+
+        container.add(header);
+
+        Separator separator = new Separator(Separator.Orientation.HORIZONTAL);
+
+        H4 tripLocationsTitle = new H4("Itinerario");
+        tripLocationsTitle.getStyle().set("margin", "0");
+
+        container.add(separator, tripLocationsTitle);
 
         HorizontalLayout locationsMapContainer = new HorizontalLayout();
         locationsMapContainer.setWidthFull();
@@ -99,34 +119,67 @@ public class UniscitiView extends VerticalLayout implements BeforeEnterObserver 
         VerticalLayout locationsContainer = new VerticalLayout();
         locationsContainer.setPadding(false);
         locationsContainer.setSpacing(false);
+        locationsContainer.setAlignItems(Alignment.CENTER);
         List<TripLocation> tripLocations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
         List<Location> locations = tripLocations.stream().map(tripLocation -> locationRepository.findLocationById(tripLocation.getLocation())).toList();
 
         LMap map = new LMap();
         map.setTileLayer(LTileLayer.DEFAULT_OPENSTREETMAP_TILE);
         map.getElement().executeJs("this.map.options.minZoom = 6;");
-        map.setSizeFull();
+        map.setWidthFull();
+        map.setMinHeight(locationsContainer.getMinHeight());
 
         for (int i = 0; i < locations.size(); i++) {
-
-            H4 temp = new H4("Tappa #" + i + ":");
-            temp.getStyle().set("margin-top", "0");
 
             LMarker locationMarker = new LMarker(locations.get(i).getLatitude(), locations.get(i).getLongitude());
             map.addLComponents(locationMarker);
 
             Span span = new Span(locations.get(i).getName());
+            span.setClassName("trip-location-span");
 
-            HorizontalLayout horizontalLayout = new HorizontalLayout(temp, span);
-            horizontalLayout.setAlignItems(Alignment.BASELINE);
+            HorizontalLayout horizontalLayout = new HorizontalLayout(span);
+            horizontalLayout.addClassName("trip-location-container");
 
             locationsContainer.add(horizontalLayout);
+
+            if (i < locations.size() - 1)
+                locationsContainer.add(new Span("."), new Span("."));
         }
 
         MapUtils.fitBounds(map, locations.toArray(new Location[0]));
 
         locationsMapContainer.add(locationsContainer, map);
-        container.add(locationsMapContainer);
+        container.add(locationsMapContainer, new Separator(Separator.Orientation.HORIZONTAL));
+
+        H4 equipmentTitle = new H4("Materiale richiesto");
+        equipmentTitle.getStyle().set("margin", "0");
+
+        container.add(equipmentTitle);
+
+        HorizontalLayout equipmentLayout = new HorizontalLayout();
+        equipmentLayout.addClassName("equipment-layout");
+
+        Map<String, String> equipmentMap;
+        if (trip.getEquipment() != null)
+            equipmentMap = new Gson().fromJson(trip.getEquipment(), new TypeToken< Map<String, String>>(){}.getType());
+        else
+            equipmentMap = new HashMap<>();
+
+        equipmentMap.forEach((equipment, value) -> {
+
+            if (value.equals("true")) {
+
+                Image equip = new Image("images/" + equipment + "-selected.png", equipment);
+                equip.setTitle(equipment);
+
+                equipmentLayout.add(equip);
+            }
+        });
+
+        if (equipmentLayout.getComponentCount() == 0)
+            equipmentLayout.add(new Span("Nessun materiale particolare richiesto"));
+
+        container.add(equipmentLayout);
 
         Button join = new Button(alreadySubscribed ? "Annulla partecipazione" : "Partecipa");
         join.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
@@ -217,6 +270,55 @@ public class UniscitiView extends VerticalLayout implements BeforeEnterObserver 
         footer.setWidthFull();
 
         container.add(footer);
+    }
+
+    private Component createDateInfo() {
+
+        VerticalLayout container = new VerticalLayout();
+        container.setPadding(false);
+        container.setSizeUndefined();
+        container.addClassName("date-info");
+
+        VerticalLayout subHeader = new VerticalLayout();
+        subHeader.addClassName("sub-header");
+        subHeader.add(new H4("Date"));
+
+        ZonedDateTime startTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond(trip.getStartDate()), ZoneId.systemDefault());
+        ZonedDateTime endTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond(trip.getEndDate()), ZoneId.systemDefault());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd LLL yyyy");
+
+        String duration;
+        if (ChronoUnit.DAYS.between(startTime, endTime) == 0) {
+            duration = "in giornata";
+        }
+        else {
+            duration = (ChronoUnit.DAYS.between(startTime, endTime) + 1) + " giorni";
+        }
+
+        H5 pTitle = new H5("Partenza");
+        Span pSpan = new Span(formatter.format(startTime));
+
+        H5 rTitle = new H5("Ritorno");
+        Span rSpan = new Span(formatter.format(endTime));
+
+        H5 dTitle = new H5("Durata");
+        Span dSpan = new Span(duration);
+
+        container.add(subHeader);
+
+        container.add(titleAndSpan(pTitle, pSpan), titleAndSpan(rTitle, rSpan), titleAndSpan(dTitle, dSpan));
+
+        return container;
+    }
+
+    private VerticalLayout titleAndSpan(H5 title, Span span) {
+
+        VerticalLayout verticalLayout = new VerticalLayout(title, span);
+        verticalLayout.setPadding(false);
+        verticalLayout.setSpacing(false);
+        verticalLayout.addClassName("title-and-span");
+
+        return verticalLayout;
     }
 
     @Override

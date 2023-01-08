@@ -25,6 +25,8 @@ public class Trip extends AbstractEntity {
 
     private Integer maxParticipants;
 
+    private String equipment;
+
     public String getTitle() {
         return title;
     }
@@ -87,6 +89,14 @@ public class Trip extends AbstractEntity {
 
     public void setMaxParticipants(Integer maxParticipants) {
         this.maxParticipants = maxParticipants;
+    }
+
+    public String getEquipment() {
+        return equipment;
+    }
+
+    public void setEquipment(String equipment) {
+        this.equipment = equipment;
     }
 
     public static String formatRating(Integer rating) {

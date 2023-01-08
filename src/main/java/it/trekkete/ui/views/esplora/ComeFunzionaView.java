@@ -19,7 +19,11 @@ public class ComeFunzionaView extends VerticalLayout {
     }
 
     public void constructUI() {
-        getStyle().set("background-image", "url('images/background.png')");
+        //getStyle().set("background-image", "url('images/background.png')");
+        getStyle().set("background-color", "#00680082");
+        setSizeUndefined();
+        setWidthFull();
+        setMinHeight("100%");
 
         VerticalLayout container = new VerticalLayout();
         container.addClassNames("about-view", "main-container");
