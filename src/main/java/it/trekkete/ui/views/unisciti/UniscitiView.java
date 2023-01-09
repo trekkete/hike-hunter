@@ -8,6 +8,7 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.BeforeEnterEvent;
@@ -21,7 +22,9 @@ import it.trekkete.data.service.TripLocationRepository;
 import it.trekkete.data.service.TripParticipantsRepository;
 import it.trekkete.data.service.TripRepository;
 import it.trekkete.security.AuthenticatedUser;
+import it.trekkete.ui.components.CustomMarker;
 import it.trekkete.ui.components.Separator;
+import it.trekkete.ui.components.ShowMore;
 import it.trekkete.ui.views.MainLayout;
 import it.trekkete.ui.views.esplora.EsploraView;
 import it.trekkete.utils.MapUtils;
@@ -96,8 +99,8 @@ public class UniscitiView extends VerticalLayout implements BeforeEnterObserver 
         H2 title = new H2(trip.getTitle());
         title.getStyle().set("margin-top", "0");
 
-        Span desc = new Span(trip.getDescription());
-        desc.addClassName("description");
+        ShowMore desc = new ShowMore(trip.getDescription());
+        desc.setBaseHeight("205px");
 
         headerInfo.add(title, desc);
 
@@ -117,6 +120,7 @@ public class UniscitiView extends VerticalLayout implements BeforeEnterObserver 
         locationsMapContainer.setMinHeight("400px");
 
         VerticalLayout locationsContainer = new VerticalLayout();
+        locationsContainer.setWidth("50%");
         locationsContainer.setPadding(false);
         locationsContainer.setSpacing(false);
         locationsContainer.setAlignItems(Alignment.CENTER);
@@ -129,13 +133,31 @@ public class UniscitiView extends VerticalLayout implements BeforeEnterObserver 
         map.setWidthFull();
         map.setMinHeight(locationsContainer.getMinHeight());
 
+        Map<Location, CustomMarker> locationMap = new HashMap<>();
+
         for (int i = 0; i < locations.size(); i++) {
 
-            LMarker locationMarker = new LMarker(locations.get(i).getLatitude(), locations.get(i).getLongitude());
+            CustomMarker locationMarker = new CustomMarker(locations.get(i).getLatitude(), locations.get(i).getLongitude(), "%2300AEEF");
             map.addLComponents(locationMarker);
+
+            locationMap.put(locations.get(i), locationMarker);
 
             Span span = new Span(locations.get(i).getName());
             span.setClassName("trip-location-span");
+            span.setTitle(locations.get(i).getName());
+
+            span.addClickListener(click -> {
+
+                locations.forEach(other -> {
+                    map.removeLComponents(locationMap.get(other));
+                    locationMap.get(other).setColor("%2300AEEF");
+                    map.addLComponents(locationMap.get(other));
+                });
+
+                map.removeLComponents(locationMarker);
+                locationMarker.setColor("%23FFAE00");
+                map.addLComponents(locationMarker);
+            });
 
             HorizontalLayout horizontalLayout = new HorizontalLayout(span);
             horizontalLayout.addClassName("trip-location-container");
@@ -143,7 +165,7 @@ public class UniscitiView extends VerticalLayout implements BeforeEnterObserver 
             locationsContainer.add(horizontalLayout);
 
             if (i < locations.size() - 1)
-                locationsContainer.add(new Span("."), new Span("."));
+                locationsContainer.add(new Span(new Icon(VaadinIcon.ANGLE_DOWN)));
         }
 
         MapUtils.fitBounds(map, locations.toArray(new Location[0]));
