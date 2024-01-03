@@ -25,7 +25,7 @@ public class User extends AbstractEntity {
 
     private Long lastLoginTs;
 
-    @Column(columnDefinition = "text default null")
+    @Column(columnDefinition = "text DEFAULT NULL")
     private String extendedData;
 
     public String getUsername() {

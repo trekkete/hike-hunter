@@ -13,16 +13,14 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.RouteParameters;
-import it.trekkete.hikehunter.data.entity.Trip;
-import it.trekkete.hikehunter.data.entity.TripLocation;
-import it.trekkete.hikehunter.data.entity.User;
-import it.trekkete.hikehunter.data.entity.UserExtendedData;
+import it.trekkete.hikehunter.data.entity.*;
 import it.trekkete.hikehunter.data.service.LocationRepository;
 import it.trekkete.hikehunter.data.service.TripLocationRepository;
 import it.trekkete.hikehunter.data.service.TripParticipantsRepository;
 import it.trekkete.hikehunter.data.service.UserRepository;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.views.logged.JoinView;
+import org.apache.lucene.util.SloppyMath;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -49,19 +47,22 @@ public class TripCard extends ListItem {
                     UserRepository userRepository,
                     TripParticipantsRepository tripParticipantsRepository,
                     TripLocationRepository tripLocationRepository,
-                    LocationRepository locationRepository) {
-        addClassNames("bg-contrast-5", "flex", "flex-col", "items-start", "rounded-l");
-        getStyle().set("cursor", "pointer");
-        setMaxWidth("300px");
-        setMinWidth("300px");
-        setMaxHeight("300px");
-        setMinHeight("300px");
+                    LocationRepository locationRepository,
+                    boolean isLocalized,
+                    Location userLocation) {
+
+        addClassNames("bg-contrast-5", "flex", "flex-col", "items-start");
+        getStyle().set("cursor", "pointer").set("font-size", "0.8em")
+                        .set("box-shadow", "0px 0px 8px -2px rgba(0,0,0,0.5)");
+        setMaxWidth("180px");
+        setMinWidth("180px");
+        setMaxHeight("250px");
+        setMinHeight("250px");
 
         Div div = new Div();
         div.addClassNames("bg-contrast", "flex items-center", "justify-center", "overflow-hidden", "w-full");
         div.setHeight("160px");
-        div.getStyle().set("border-radius", "var(--lumo-border-radius-l) var(--lumo-border-radius-l) 0 0")
-                .set("position", "relative");
+        div.getStyle().set("position", "relative");
 
         Image image = new Image();
         image.setWidth("100%");
@@ -73,16 +74,15 @@ public class TripCard extends ListItem {
                 .set("bottom", "0")
                 .set("left", "0")
                 .set("background-image", "linear-gradient(to top, rgb(0, 0, 0), rgba(0,0,0,0))")
-                .set("z-index", "10");
+                .set("z-index", "1");
 
         Span duration = new Span();
         duration.getStyle()
                 .set("color", "white")
-                .set("font-size", "small")
                 .set("position", "absolute")
                 .set("bottom", "2px")
                 .set("left", "5px")
-                .set("z-index", "20");
+                .set("z-index", "1");
         duration.setText(formatDuration(trip.getStartDate(), trip.getEndDate()));
 
         div.add(shadow, duration);
@@ -98,11 +98,11 @@ public class TripCard extends ListItem {
         div.add(image);
 
         Span header = new Span();
-        header.addClassNames("text-m", "font-semibold");
+        header.addClassNames("font-semibold");
         header.setText(trip.getTitle());
 
         Span subtitle = new Span();
-        subtitle.addClassNames("text-xs", "text-secondary");
+        subtitle.addClassNames("text-secondary");
         subtitle.add(getCreatorInfo(trip.getCreator(), userRepository));
 
         addClickListener(click -> {
@@ -111,22 +111,32 @@ public class TripCard extends ListItem {
 
         VerticalLayout content = new VerticalLayout(header, subtitle);
         content.setSpacing(false);
+        content.setPadding(false);
+        content.getStyle().set("padding", "0.5em");
 
         Span locations = new Span();
         List<TripLocation> tripLocations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
-        if (tripLocations.size() == 1) {
-            locations.setText(locationRepository.findLocationById(tripLocations.get(0).getLocation()).getName());
-        }
-        else {
-            locations.setText(tripLocations.size() + " itinerari");
+        if (tripLocations.size() > 0) {
+            locations.setText(tripLocations.size() + " itinerari" + (tripLocations.size() == 1 ? "o" : ""));
         }
         content.add(locations);
+
+        Location first = locationRepository.findLocationById(tripLocations.get(0).getLocation());
+
+        if (isLocalized) {
+            double distance = SloppyMath.haversinMeters(userLocation.getLatitude(), userLocation.getLongitude(), first.getLatitude(), first.getLongitude());
+            Span kms = new Span(((int) distance/1000) + " km da te");
+
+            content.add(kms);
+        }
 
         content.addAndExpand(new Span());
 
         HorizontalLayout footer = new HorizontalLayout(generateDifficultyBadge(trip.getRating()));
+        footer.setSpacing(false);
         footer.setWidthFull();
         footer.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
+        footer.setAlignItems(FlexComponent.Alignment.BASELINE);
 
         boolean isAuthenticated = authenticatedUser.get().isPresent();
 
@@ -139,7 +149,7 @@ public class TripCard extends ListItem {
         }
         else {
             if (trip.getMaxParticipants() != null && trip.getMaxParticipants() > 0) {
-                Span remaining = new Span((trip.getMaxParticipants() - tripParticipantsRepository.countAllByTrip(trip.getId())) + " posti rimanenti");
+                Span remaining = new Span((trip.getMaxParticipants() - tripParticipantsRepository.countAllByTrip(trip.getId())) + " posti");
                 footer.add(remaining);
             }
         }
@@ -189,6 +199,11 @@ public class TripCard extends ListItem {
 
         UserExtendedData extendedData = new Gson().fromJson(user.getExtendedData(), UserExtendedData.class);
 
-        return new Span("Proposta da: " + extendedData.getName() + " " + extendedData.getSurname());
+        if (extendedData != null) {
+            return new Span("Proposta da: " + extendedData.getName() + " " + extendedData.getSurname());
+        }
+        else {
+            return new Span("Proposta da: " + user.getUsername());
+        }
     }
 }

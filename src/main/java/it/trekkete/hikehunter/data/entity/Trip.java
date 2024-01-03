@@ -2,6 +2,7 @@ package it.trekkete.hikehunter.data.entity;
 
 import org.hibernate.annotations.Type;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Table;
 import java.util.UUID;
@@ -11,6 +12,8 @@ import java.util.UUID;
 public class Trip extends AbstractEntity {
 
     private String title;
+
+    @Column(columnDefinition = "text")
     private String description;
 
     private Long creationTs;

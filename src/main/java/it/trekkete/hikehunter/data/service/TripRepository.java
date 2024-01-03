@@ -25,24 +25,18 @@ public interface TripRepository extends JpaRepository<Trip, UUID> {
 
     List<Trip> findAllByTitleContaining(String title, Sort sort);
 
-    @Query(value = "SELECT T.id AS trip, (COALESCE(T.max_participants, 100) - participants.number) AS available FROM trip as T JOIN (SELECT trip, COUNT(user) AS number FROM trip_participants GROUP BY trip) AS participants ON T.id = participants.trip WHERE T.title LIKE '%:smth%' GROUP BY id ORDER BY available DESC", nativeQuery = true)
-    List<Object[]> findAllByTitleContainingSortByAvailabilityImpl(@Param("smth") String title);
+    @Query(value = "SELECT T.id AS trip, (COALESCE(T.max_participants, 100) - participants.number) AS available FROM trip as T JOIN (SELECT trip, COUNT(user) AS number FROM trip_participants GROUP BY trip) AS participants ON T.id = participants.trip WHERE LOWER(T.title) LIKE %:title% GROUP BY id ORDER BY available DESC", nativeQuery = true)
+    List<Object[]> findAllByTitleContainingSortByAvailabilityImpl(@Param("title") String title);
 
     default List<Trip> findAllByTitleContainingSortByAvailability(String title) {
 
         List<Trip> trips = new ArrayList<>();
-        List<Object[]> counts = findAllByTitleContainingSortByAvailabilityImpl(title);
+        List<Object[]> counts = findAllByTitleContainingSortByAvailabilityImpl(title.toLowerCase());
 
         if (counts == null)
             return null;
 
-        System.out.println("SIZE: " + counts.size());
-
-        counts.forEach(entry -> {
-
-            System.out.println((String) entry[0] + " " + ((BigInteger) entry[1]).intValue());
-            trips.add(findTripById(UUID.fromString((String) entry[0])));
-        });
+        counts.forEach(entry -> trips.add(findTripById(UUID.fromString((String) entry[0]))));
 
         return trips;
     }

@@ -1,5 +1,7 @@
 package it.trekkete.hikehunter.ui.views.general;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -14,6 +16,8 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
+import elemental.json.JsonValue;
+import it.trekkete.hikehunter.data.entity.Location;
 import it.trekkete.hikehunter.data.entity.Trip;
 import it.trekkete.hikehunter.data.service.*;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
@@ -57,6 +61,9 @@ public class SearchView extends VerticalLayout {
     private List<Trip> trips;
     private VerticalLayout tripContainer;
 
+    private boolean isLocalized;
+    private Location userLocation;
+
     public SearchView(@Autowired AuthenticatedUser authenticatedUser,
                        @Autowired TripRepository tripRepository,
                        @Autowired TripParticipantsRepository tripParticipantsRepository,
@@ -75,12 +82,10 @@ public class SearchView extends VerticalLayout {
     }
 
     private void constructUI() {
-        //getStyle().set("background-image", "url('images/background.png')");
-        getStyle().set("background-color", "#00680082");
+
         setMinHeight("100%");
 
         VerticalLayout container = new VerticalLayout();
-        container.addClassNames("esplora-view", "main-container");
 
         HorizontalLayout headerContainer = new HorizontalLayout();
         headerContainer.setWidthFull();
@@ -92,7 +97,7 @@ public class SearchView extends VerticalLayout {
         header.getStyle().set("margin-top", "0");
 
         TextField searchField = new TextField("Nome escursione");
-        searchField.setValueChangeMode(ValueChangeMode.EAGER);
+        searchField.setValueChangeMode(ValueChangeMode.LAZY);
 
         Select<Sorting> sortBy = new Select<>();
         sortBy.setLabel("Ordina per");
@@ -121,33 +126,55 @@ public class SearchView extends VerticalLayout {
     private void updateUI() {
 
         tripContainer.removeAll();
-        if (trips.isEmpty()) {
 
-            tripContainer.setAlignItems(FlexComponent.Alignment.CENTER);
-            tripContainer.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+        getElement().executeJs("return window.trekkete.coords;")
+                .then(JsonValue.class, result -> {
 
-            H3 empty = new H3("Non ci sono escursioni al momento :(");
-            empty.getStyle().set("color", "gray");
+                    if (result != null) {
 
-            Button create = new Button("Crea un'escursione!");
-            create.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-            create.addClickListener(click -> UI.getCurrent().navigate(CreateTripView.class));
+                        JsonObject object = new Gson().fromJson(result.toJson(), JsonObject.class);
 
-            tripContainer.add(empty, create);
-        }
-        else {
+                        isLocalized = true;
 
-            HorizontalLayout imageContainer = new HorizontalLayout();
-            imageContainer.setWidthFull();
-            imageContainer.addClassNames("gap-m", "m-0", "list-none", "p-0");
-            imageContainer.getStyle().set("overflow-x", "scroll").set("padding-bottom", "0.5em").set("flex-wrap", "wrap");
+                        userLocation = new Location();
+                        userLocation.setLatitude(object.get("lat").getAsDouble());
+                        userLocation.setLongitude(object.get("lon").getAsDouble());
+                    }
+                    else {
+                        isLocalized = false;
+                    }
 
-            for (Trip t : trips) {
-                imageContainer.add(new TripCard(t, authenticatedUser, userRepository, tripParticipantsRepository, tripLocationRepository, locationRepository));
-            }
+                    if (trips.isEmpty()) {
 
-            tripContainer.add(imageContainer);
-        }
+                        tripContainer.setAlignItems(FlexComponent.Alignment.CENTER);
+                        tripContainer.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+
+                        H3 empty = new H3("Non ci sono escursioni al momento :(");
+                        empty.getStyle().set("color", "gray");
+
+                        Button create = new Button("Crea un'escursione!");
+                        create.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+                        create.addClickListener(click -> UI.getCurrent().navigate(CreateTripView.class));
+
+                        tripContainer.add(empty, create);
+                    }
+                    else {
+
+                        HorizontalLayout imageContainer = new HorizontalLayout();
+                        imageContainer.setWidthFull();
+                        imageContainer.addClassNames("gap-m", "m-0", "list-none", "p-0");
+                        imageContainer.getStyle().set("overflow-x", "scroll").set("padding", "0 0 1em 0.5em").set("flex-wrap", "wrap");
+
+                        for (Trip t : trips) {
+                            imageContainer.add(new TripCard(t, authenticatedUser,
+                                    userRepository, tripParticipantsRepository,
+                                    tripLocationRepository, locationRepository,
+                                    isLocalized, userLocation));
+                        }
+
+                        tripContainer.add(imageContainer);
+                    }
+                });
     }
 
     private void filterItems(String search, Sorting sort) {

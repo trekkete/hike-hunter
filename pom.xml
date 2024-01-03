@@ -164,6 +164,11 @@
             <artifactId>unirest-java</artifactId>
             <version>3.14.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-spatial</artifactId>
+            <version>8.2.0</version>
+        </dependency>
     </dependencies>
 
     <build>

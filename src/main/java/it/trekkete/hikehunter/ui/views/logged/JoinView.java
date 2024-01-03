@@ -71,35 +71,24 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
         User user = authenticatedUser.get().get();
 
-        //getStyle().set("background-image", "url('images/background.png')");
-        getStyle().set("background-color", "#00680082");
-
         VerticalLayout container = new VerticalLayout();
-        container.addClassNames("esplora-view", "main-container");
+        container.setPadding(false);
+        container.setAlignItems(Alignment.CENTER);
 
         add(container);
 
         if (trip == null)
             return;
 
-        HorizontalLayout header = new HorizontalLayout();
-        header.addClassName("unisciti-view-header");
-
-        VerticalLayout headerInfo = new VerticalLayout();
-        headerInfo.setPadding(false);
-        headerInfo.setWidthFull();
-
         H2 title = new H2(trip.getTitle());
-        title.getStyle().set("margin-top", "0");
+        title.getStyle().set("margin", "0");
 
         ShowMore desc = new ShowMore(trip.getDescription());
         desc.setBaseHeight("205px");
 
-        headerInfo.add(title, desc);
+        Component dateInfo = createDateInfo();
 
-        header.add(headerInfo, createDateInfo());
-
-        container.add(header);
+        container.add(title, dateInfo, desc);
 
         Separator separator = new Separator(Separator.Orientation.HORIZONTAL);
 
@@ -108,12 +97,11 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
         container.add(separator, tripLocationsTitle);
 
-        HorizontalLayout locationsMapContainer = new HorizontalLayout();
+        VerticalLayout locationsMapContainer = new VerticalLayout();
         locationsMapContainer.setWidthFull();
         locationsMapContainer.setMinHeight("400px");
 
         VerticalLayout locationsContainer = new VerticalLayout();
-        locationsContainer.setWidth("50%");
         locationsContainer.setPadding(false);
         locationsContainer.setSpacing(false);
         locationsContainer.setAlignItems(Alignment.CENTER);
@@ -125,6 +113,7 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
         map.getElement().executeJs("this.map.options.minZoom = 6;");
         map.setWidthFull();
         map.setMinHeight(locationsContainer.getMinHeight());
+        map.setHeight("300px");
 
         Map<Location, CustomMarker> locationMap = new HashMap<>();
 
@@ -173,6 +162,9 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
         HorizontalLayout equipmentLayout = new HorizontalLayout();
         equipmentLayout.addClassName("equipment-layout");
+        equipmentLayout.getStyle().set("overflow-x", "scroll");
+        equipmentLayout.setAlignItems(Alignment.CENTER);
+        equipmentLayout.setJustifyContentMode(JustifyContentMode.CENTER);
 
         Map<String, String> equipmentMap;
         if (trip.getEquipment() != null)
@@ -185,6 +177,8 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
             if (value.equals("true")) {
 
                 Image equip = new Image("images/" + equipment + "-selected.png", equipment);
+                equip.setMaxWidth("100px");
+                equip.setMaxHeight("100px");
                 equip.setTitle(equipment);
 
                 equipmentLayout.add(equip);
@@ -300,14 +294,13 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
     private Component createDateInfo() {
 
-        VerticalLayout container = new VerticalLayout();
+        HorizontalLayout container = new HorizontalLayout();
         container.setPadding(false);
-        container.setSizeUndefined();
+        container.setWidthFull();
         container.addClassName("date-info");
-
-        VerticalLayout subHeader = new VerticalLayout();
-        subHeader.addClassName("sub-header");
-        subHeader.add(new H4("Date"));
+        container.getStyle()
+                .set("box-shadow", "0 0 10px 0.005em #eee")
+                .set("padding", "0.5em");
 
         ZonedDateTime startTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond(trip.getStartDate()), ZoneId.systemDefault());
         ZonedDateTime endTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond(trip.getEndDate()), ZoneId.systemDefault());
@@ -330,8 +323,6 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
         H5 dTitle = new H5("Durata");
         Span dSpan = new Span(duration);
 
-        container.add(subHeader);
-
         container.add(titleAndSpan(pTitle, pSpan), titleAndSpan(rTitle, rSpan), titleAndSpan(dTitle, dSpan));
 
         return container;
@@ -339,10 +330,14 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
     private VerticalLayout titleAndSpan(H5 title, Span span) {
 
+        title.getStyle().set("margin", "0").set("font-size", "0.9em");
+
+        span.getStyle().set("text-align", "center");
+
         VerticalLayout verticalLayout = new VerticalLayout(title, span);
         verticalLayout.setPadding(false);
         verticalLayout.setSpacing(false);
-        verticalLayout.addClassName("title-and-span");
+        verticalLayout.setAlignItems(Alignment.CENTER);
 
         return verticalLayout;
     }

@@ -1,17 +1,22 @@
 package it.trekkete.hikehunter.ui.views.general;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.H4;
+import com.vaadin.flow.component.html.H5;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
+import elemental.json.JsonValue;
+import it.trekkete.hikehunter.data.entity.Location;
 import it.trekkete.hikehunter.data.entity.Trip;
 import it.trekkete.hikehunter.data.entity.User;
 import it.trekkete.hikehunter.data.service.*;
@@ -39,6 +44,9 @@ public class HomeView extends VerticalLayout {
     private final LocationRepository locationRepository;
     private final TripLocationRepository tripLocationRepository;
 
+    private boolean isLocalized;
+    private Location userLocation;
+
     public HomeView(@Autowired AuthenticatedUser authenticatedUser,
                     @Autowired TripRepository tripRepository,
                     @Autowired TripParticipantsRepository tripParticipantsRepository,
@@ -57,19 +65,17 @@ public class HomeView extends VerticalLayout {
     }
 
     private void constructUI() {
-        //getStyle().set("background-image", "url('images/background.png')");
-        getStyle().set("background-color", "#00680082");
 
         VerticalLayout container = new VerticalLayout();
-        container.addClassNames("esplora-view", "main-container");
+        container.setSpacing(false);
+        container.setPadding(false);
 
         HorizontalLayout headerContainer = new HorizontalLayout();
         headerContainer.setWidthFull();
         headerContainer.setAlignItems(FlexComponent.Alignment.BASELINE);
         headerContainer.setJustifyContentMode(JustifyContentMode.BETWEEN);
 
-        H2 header = new H2("Scopri la montagna e parti all'avventura");
-        header.addClassNames("mb-0", "mt-xl", "text-3xl");
+        H3 header = new H3("Scopri la montagna e parti all'avventura");
         header.getStyle().set("margin-top", "0");
 
         Button search = new Button("Vedi tutte");
@@ -86,30 +92,49 @@ public class HomeView extends VerticalLayout {
         verticalLayout.setPadding(false);
 
         add(verticalLayout);
-        if (trips.isEmpty()) {
 
-            verticalLayout.setAlignItems(FlexComponent.Alignment.CENTER);
-            verticalLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+        getElement().executeJs("return window.trekkete.coords;")
+                .then(JsonValue.class, result -> {
 
-            H3 empty = new H3("Non ci sono escursioni al momento :(");
-            empty.getStyle().set("color", "gray");
+                    if (result != null) {
 
-            Button create = new Button("Crea un'escursione!");
-            create.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-            create.addClickListener(click -> UI.getCurrent().navigate(CreateTripView.class));
+                        JsonObject object = new Gson().fromJson(result.toJson(), JsonObject.class);
 
-            verticalLayout.add(empty, create);
-        }
-        else {
+                        isLocalized = true;
 
-            verticalLayout.add(createPlaylist("Le new entry", tripRepository.findAllByOrderByCreationTsDesc()));
-            verticalLayout.add(createPlaylist("Per iniziare", tripRepository.findAllByRatingLessThanEqual(2)));
+                        userLocation = new Location();
+                        userLocation.setLatitude(object.get("lat").getAsDouble());
+                        userLocation.setLongitude(object.get("lon").getAsDouble());
+                    }
+                    else {
+                        isLocalized = false;
+                    }
 
-            Optional<User> maybeUser = authenticatedUser.get();
-            if (maybeUser.isPresent()) {
-                verticalLayout.add(createPlaylist("Mettiti alla prova", trips));
-            }
-        }
+                    if (trips.isEmpty()) {
+
+                        verticalLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+                        verticalLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+
+                        H3 empty = new H3("Non ci sono escursioni al momento :(");
+                        empty.getStyle().set("color", "gray");
+
+                        Button create = new Button("Crea un'escursione!");
+                        create.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+                        create.addClickListener(click -> UI.getCurrent().navigate(CreateTripView.class));
+
+                        verticalLayout.add(empty, create);
+                    }
+                    else {
+
+                        verticalLayout.add(createPlaylist("Le new entry", tripRepository.findAllByOrderByCreationTsDesc()));
+                        verticalLayout.add(createPlaylist("Per iniziare", tripRepository.findAllByRatingLessThanEqual(2)));
+
+                        Optional<User> maybeUser = authenticatedUser.get();
+                        if (maybeUser.isPresent()) {
+                            verticalLayout.add(createPlaylist("Mettiti alla prova", trips));
+                        }
+                    }
+                });
 
         container.add(headerContainer, verticalLayout);
         add(container);
@@ -118,8 +143,8 @@ public class HomeView extends VerticalLayout {
     public VerticalLayout createPlaylist(String title, List<Trip> items) {
 
         VerticalLayout container = new VerticalLayout();
-        H3 playlistTitle = new H3(title);
-        playlistTitle.getStyle().set("margin-top", "0.5").set("padding-left", "0.3em");
+        H5 playlistTitle = new H5(title);
+        playlistTitle.getStyle().set("margin-top", "0");
 
         container.setWidthFull();
         container.setPadding(false);
@@ -129,7 +154,7 @@ public class HomeView extends VerticalLayout {
         HorizontalLayout imageContainer = new HorizontalLayout();
         imageContainer.setWidthFull();
         imageContainer.addClassNames("gap-m", "m-0", "list-none", "p-0");
-        imageContainer.getStyle().set("overflow-x", "scroll").set("padding", "0 0 1em 0.5em");
+        imageContainer.getStyle().set("overflow-x", "scroll").set("padding", "0.3em");
 
         if (items == null || items.isEmpty()) {
             H4 empty = new H4("Escursioni finite, torna più tardi");
@@ -139,28 +164,16 @@ public class HomeView extends VerticalLayout {
         }
         else {
             for (Trip t : items) {
-                imageContainer.add(new TripCard(t, authenticatedUser, userRepository, tripParticipantsRepository, tripLocationRepository, locationRepository));
+                imageContainer.add(
+                        new TripCard(t, authenticatedUser,
+                                userRepository, tripParticipantsRepository,
+                                tripLocationRepository, locationRepository,
+                                isLocalized, userLocation));
             }
         }
 
         container.add(imageContainer);
 
         return container;
-    }
-
-    private Trip generateRandomTrip() {
-
-        Trip trip = new Trip();
-        trip.setTitle("Ferrata delle bocchette del brenta");
-        trip.setDescription("Si sale dal percorso 105 e poi si procede costeggiando il fianco dcedlla montagna per un po' fino all'imbocco della ferrata");
-        trip.setId(UUID.randomUUID());
-        trip.setCreator(UUID.fromString("baa08b06-bd6b-4754-bf39-d50b7a6e5750"));
-        trip.setRating(new Random().nextInt(5) + 1);
-        trip.setStartDate(ZonedDateTime.now().minusDays(new Random().nextInt(0, 2)).toEpochSecond());
-        trip.setEndDate(ZonedDateTime.now().toEpochSecond());
-        trip.setCreationTs(ZonedDateTime.now().toEpochSecond());
-        trip.setMaxParticipants(new Random().nextInt(4, 7));
-
-        return trip;
     }
 }

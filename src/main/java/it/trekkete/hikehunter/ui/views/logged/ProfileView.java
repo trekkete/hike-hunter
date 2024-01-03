@@ -2,27 +2,32 @@ package it.trekkete.hikehunter.ui.views.logged;
 
 import com.google.gson.Gson;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.*;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.component.progressbar.ProgressBarVariant;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.flow.server.StreamResource;
-import it.trekkete.hikehunter.data.entity.Trip;
-import it.trekkete.hikehunter.data.entity.TripParticipants;
-import it.trekkete.hikehunter.data.entity.User;
-import it.trekkete.hikehunter.data.entity.UserExtendedData;
+import it.trekkete.hikehunter.data.entity.*;
 import it.trekkete.hikehunter.data.service.*;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
+import it.trekkete.hikehunter.ui.components.RatingStars;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.annotation.security.PermitAll;
 import java.io.ByteArrayInputStream;
 import java.util.List;
+import java.util.UUID;
 
 @PageTitle("Profilo")
 @Route(value = "profile", layout = MainLayout.class)
@@ -176,13 +181,76 @@ public class ProfileView extends VerticalLayout {
 
         container.add(title);
 
+        Button chat = new Button(new Icon(VaadinIcon.CHAT));
+        chat.addClickListener(click -> {
+            UI.getCurrent().navigate(ChatView.class, new RouteParameters("tripId", String.valueOf(trip.getId())));
+        });
+
         Button review = new Button("Lascia una recensione");
         review.addClickListener(click -> {
 
+            Dialog dialog = new Dialog();
 
+            dialog.setHeaderTitle("Lascia una recensione dei tuoi compagni");
+
+            H5 preps = new H5("Preparazione");
+
+            RatingStars prepsStar = new RatingStars();
+
+            H5 skill = new H5("Abilità");
+
+            RatingStars skillStar = new RatingStars();
+
+            H5 sociability = new H5("Socialità");
+
+            RatingStars socStar = new RatingStars();
+
+            Button closeButton = new Button(new Icon("lumo", "cross"), (e) -> dialog.close());
+            closeButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+            dialog.getHeader().add(closeButton);
+
+            Button cancelButton = new Button("Annulla", (e) -> dialog.close());
+            cancelButton.getStyle().set("margin-right", "auto");
+            dialog.getFooter().add(cancelButton);
+
+            Button confirmButton = new Button("Salva", (e) -> {
+
+                List<TripParticipants> participants = tripParticipantsRepository.findAllByTrip(trip.getId());
+
+                participants.forEach( tripParticipants -> {
+
+                    UUID about = tripParticipants.getUser();
+
+                    UUID from = authenticatedUser.get().get().getId();
+
+                    if (from.equals(about))
+                        return;
+
+                    UserRating rating = new UserRating();
+                    rating.setTrip(trip.getId());
+                    rating.setFrom(from);
+                    rating.setAbout(about);
+
+                    rating.setPreparation(prepsStar.getValue());
+                    rating.setSkill(skillStar.getValue());
+                    rating.setSociability(socStar.getValue());
+
+                    userRatingRepository.save(rating);
+
+                });
+
+                dialog.close();
+            });
+            confirmButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+            dialog.add(preps, prepsStar, skill, skillStar, sociability, socStar);
+
+            dialog.getFooter().add(cancelButton, confirmButton);
+
+            dialog.open();
         });
 
-        container.add(review);
+        container.add(new HorizontalLayout(chat, review));
 
         return container;
     }

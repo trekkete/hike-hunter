@@ -1,6 +1,7 @@
 package it.trekkete.hikehunter.ui.components;
 
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -11,7 +12,7 @@ import java.util.UUID;
 
 public class ShowMore extends VerticalLayout {
 
-    private Span content;
+    private Paragraph content;
 
     public ShowMore(String text) {
 
@@ -20,7 +21,7 @@ public class ShowMore extends VerticalLayout {
 
         String contentId = "show-more-" + UUID.randomUUID();
 
-        content = new Span(text);
+        content = new Paragraph(text);
         content.addClassName("show-more-content");
         content.setId(contentId);
 

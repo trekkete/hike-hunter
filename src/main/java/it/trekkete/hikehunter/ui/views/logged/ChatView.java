@@ -32,7 +32,6 @@ import java.util.UUID;
 public class ChatView extends VerticalLayout implements BeforeEnterObserver {
 
     private Trip trip;
-    private TripChatMessage chat;
 
     private AuthenticatedUser authenticatedUser;
     private TripRepository tripRepository;
@@ -64,9 +63,13 @@ public class ChatView extends VerticalLayout implements BeforeEnterObserver {
         List<MessageListItem> items = new ArrayList<>();
         for (TripChatMessage message : chat) {
 
-            items.add(new MessageListItem(message.getContent(),
+            MessageListItem e = new MessageListItem(message.getContent(),
                     Instant.ofEpochSecond(message.getTs()),
-                    userRepository.findById(message.getUser()).get().getUsername()));
+                    userRepository.findById(message.getUser()).get().getUsername());
+            if (message.getUser().equals(authenticatedUser.get().get().getId()))
+                e.setUserColorIndex(2);
+
+            items.add(e);
         }
 
         MessageList list = new MessageList(items);
@@ -94,7 +97,10 @@ public class ChatView extends VerticalLayout implements BeforeEnterObserver {
             chatRepository.save(newMessage);
 
             chat.add(newMessage);
-            items.add(new MessageListItem(message, Instant.ofEpochSecond(ts), authenticatedUser.get().get().getUsername()));
+            MessageListItem e = new MessageListItem(message, Instant.ofEpochSecond(ts), authenticatedUser.get().get().getUsername());
+            e.setUserColorIndex(2);
+
+            items.add(e);
 
             list.setItems(items);
         });
