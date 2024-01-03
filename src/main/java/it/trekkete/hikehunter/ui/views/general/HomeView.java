@@ -70,21 +70,15 @@ public class HomeView extends VerticalLayout {
         container.setSpacing(false);
         container.setPadding(false);
 
-        HorizontalLayout headerContainer = new HorizontalLayout();
-        headerContainer.setWidthFull();
-        headerContainer.setAlignItems(FlexComponent.Alignment.BASELINE);
-        headerContainer.setJustifyContentMode(JustifyContentMode.BETWEEN);
-
         H3 header = new H3("Scopri la montagna e parti all'avventura");
-        header.getStyle().set("margin-top", "0");
+        header.getStyle().set("margin", "0");
 
-        Button search = new Button("Vedi tutte");
+        Button search = new Button("Sfoglia tutte");
         search.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         search.addClickListener(click -> {
             UI.getCurrent().navigate(SearchView.class);
         });
-
-        headerContainer.add(header, search);
+        search.setWidthFull();
 
         List<Trip> trips = tripRepository.findAll();
 
@@ -136,7 +130,7 @@ public class HomeView extends VerticalLayout {
                     }
                 });
 
-        container.add(headerContainer, verticalLayout);
+        container.add(header, verticalLayout, search);
         add(container);
     }
 

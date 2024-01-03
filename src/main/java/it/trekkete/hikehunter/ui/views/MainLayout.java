@@ -222,7 +222,7 @@ public class MainLayout extends AppLayout {
         return new MenuItemInfo[]{ //
                 new MenuItemInfo("esplora", "la la-globe", HomeView.class), //
                 new MenuItemInfo("crea un'escursione", "la la-map-marker", CreateTripView.class), //
-                new MenuItemInfo("come funziona?", "la la-question", AboutView.class), //
+                //new MenuItemInfo("come funziona?", "la la-question", AboutView.class), //
         };
     }
 

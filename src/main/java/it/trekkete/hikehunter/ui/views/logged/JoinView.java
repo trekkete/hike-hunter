@@ -164,7 +164,6 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
         equipmentLayout.addClassName("equipment-layout");
         equipmentLayout.getStyle().set("overflow-x", "scroll");
         equipmentLayout.setAlignItems(Alignment.CENTER);
-        equipmentLayout.setJustifyContentMode(JustifyContentMode.CENTER);
 
         Map<String, String> equipmentMap;
         if (trip.getEquipment() != null)
@@ -192,15 +191,16 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
         container.add(new Separator(Separator.Orientation.HORIZONTAL));
 
-        showChat = new Button("Chat");
+        showChat = new Button(VaadinIcon.CHAT.create());
         showChat.addClickListener(click -> {
             UI.getCurrent().navigate(ChatView.class, new RouteParameters("tripId", String.valueOf(trip.getId())));
         });
+        showChat.addThemeVariants(ButtonVariant.LUMO_LARGE);
 
         showChat.setVisible(alreadySubscribed);
 
-        Button join = new Button(alreadySubscribed ? "Annulla partecipazione" : "Partecipa");
-        join.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        Button join = new Button(alreadySubscribed ? VaadinIcon.CLOSE.create() : VaadinIcon.USER_CHECK.create());
+        join.addThemeVariants(ButtonVariant.LUMO_LARGE, alreadySubscribed ? ButtonVariant.LUMO_ERROR : ButtonVariant.LUMO_PRIMARY);
         join.addClickListener(click -> {
 
             Dialog dialog = new Dialog();
@@ -226,7 +226,9 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
                     tripParticipantsRepository.save(participants);
 
                     alreadySubscribed = true;
-                    join.setText("Annulla partecipazione");
+                    join.setIcon(VaadinIcon.CLOSE.create());
+                    join.removeThemeVariants(ButtonVariant.LUMO_PRIMARY);
+                    join.addThemeVariants(ButtonVariant.LUMO_ERROR);
                 }
                 else {
 
@@ -234,7 +236,9 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
                     tripParticipantsRepository.delete(participants);
 
                     alreadySubscribed = false;
-                    join.setText("Partecipa");
+                    join.setIcon(VaadinIcon.USER_CHECK.create());
+                    join.removeThemeVariants(ButtonVariant.LUMO_ERROR);
+                    join.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
                 }
 
                 showChat.setVisible(alreadySubscribed);
@@ -251,7 +255,7 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
         if (user.getId().equals(trip.getCreator())) {
 
-            Button delete = new Button("Elimina", buttonClickEvent -> {
+            Button delete = new Button(VaadinIcon.TRASH.create(), buttonClickEvent -> {
 
                 Dialog dialog = new Dialog();
 
@@ -282,11 +286,11 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
                 dialog.open();
             });
 
-            delete.addThemeVariants(ButtonVariant.LUMO_ERROR);
+            delete.addThemeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_LARGE);
 
             footer.add(delete);
         }
-        footer.setJustifyContentMode(JustifyContentMode.END);
+        footer.setJustifyContentMode(JustifyContentMode.CENTER);
         footer.setWidthFull();
 
         container.add(footer);

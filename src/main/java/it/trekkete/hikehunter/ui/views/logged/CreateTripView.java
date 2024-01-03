@@ -10,6 +10,7 @@ import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
+import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Image;
@@ -89,12 +90,9 @@ public class CreateTripView extends VerticalLayout {
         this.markerMap = new HashMap<>();
         this.equipmentMap = new HashMap<>();
 
-        addClassName("parti-view");
-        //getStyle().set("background-image", "url('images/background.png')");
-        getStyle().set("background-color", "#00680082");
-
         VerticalLayout container = new VerticalLayout();
-        container.addClassNames("esplora-view", "main-container");
+        container.setPadding(false);
+        container.setAlignItems(Alignment.CENTER);
 
         container.add(createTitle());
         container.add(createFormLayout());
@@ -157,7 +155,10 @@ public class CreateTripView extends VerticalLayout {
     }
 
     private Component createTitle() {
-        return new H3("Crea un'escursione");
+        H2 title = new H2("Crea un'escursione");
+        title.getStyle().set("margin", "0");
+
+        return title;
     }
 
     private Component createFormLayout() {
@@ -231,7 +232,7 @@ public class CreateTripView extends VerticalLayout {
         HorizontalLayout optionLayout = new HorizontalLayout();
         optionLayout.setWidthFull();
         optionLayout.setAlignItems(Alignment.CENTER);
-        optionLayout.setJustifyContentMode(JustifyContentMode.CENTER);
+        optionLayout.getStyle().set("overflow", "scroll");
 
         optionLayout.add(createOptionLayout("shoes"));
         optionLayout.add(createOptionLayout("harness"));
@@ -309,7 +310,7 @@ public class CreateTripView extends VerticalLayout {
         locationGrid = new Grid<>();
         locationGrid.setSizeFull();
         locationGrid.addColumn(Location::getName).setHeader("Itinerari");
-        locationGrid.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_NO_BORDER);
+        locationGrid.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_NO_ROW_BORDERS, GridVariant.LUMO_ROW_STRIPES);
         locationGrid.addComponentColumn(location -> {
 
             Button delete = new Button(new Icon(VaadinIcon.TRASH));
@@ -326,7 +327,7 @@ public class CreateTripView extends VerticalLayout {
 
             return delete;
         }).setFlexGrow(0);
-        locationGrid.setMinHeight("400px");
+        locationGrid.setMinHeight("200px");
 
         formLayout.add(itinerari, 2);
         formLayout.add(searchLocation, 2);
@@ -339,10 +340,12 @@ public class CreateTripView extends VerticalLayout {
 
     private Component createButtonLayout() {
         HorizontalLayout buttonLayout = new HorizontalLayout();
+        buttonLayout.setWidthFull();
+        buttonLayout.setJustifyContentMode(JustifyContentMode.CENTER);
         buttonLayout.addClassName("button-layout");
         save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        buttonLayout.add(save);
-        buttonLayout.add(cancel);
+        buttonLayout.add(save, cancel);
+
         return buttonLayout;
     }
 

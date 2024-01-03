@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
@@ -86,15 +87,16 @@ public class SearchView extends VerticalLayout {
         setMinHeight("100%");
 
         VerticalLayout container = new VerticalLayout();
+        container.setPadding(false);
+        container.setAlignItems(Alignment.CENTER);
 
-        HorizontalLayout headerContainer = new HorizontalLayout();
-        headerContainer.setWidthFull();
-        headerContainer.setAlignItems(FlexComponent.Alignment.BASELINE);
-        headerContainer.setJustifyContentMode(JustifyContentMode.BETWEEN);
+        FormLayout headerContainer = new FormLayout();
+        headerContainer.setResponsiveSteps(
+                new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("500px", 2));
 
         H2 header = new H2("Cerca tra tutte le escursioni");
-        header.addClassNames("mb-0", "mt-xl", "text-3xl");
-        header.getStyle().set("margin-top", "0");
+        header.getStyle().set("margin", "0");
 
         TextField searchField = new TextField("Nome escursione");
         searchField.setValueChangeMode(ValueChangeMode.LAZY);
@@ -108,7 +110,7 @@ public class SearchView extends VerticalLayout {
         searchField.addValueChangeListener(event -> filterItems(event.getValue(), sortBy.getValue()));
         sortBy.addValueChangeListener(event -> filterItems(searchField.getValue(), event.getValue()));
 
-        headerContainer.add(header, new HorizontalLayout(searchField, sortBy));
+        headerContainer.add(searchField, sortBy);
 
         trips = tripRepository.findAll();
 
@@ -117,7 +119,7 @@ public class SearchView extends VerticalLayout {
 
         add(tripContainer);
 
-        container.add(headerContainer, tripContainer);
+        container.add(header, headerContainer, tripContainer);
         add(container);
 
         updateUI();
@@ -187,13 +189,13 @@ public class SearchView extends VerticalLayout {
                 trips = tripRepository.findAllByTitleContainingSortByAvailability(search);
             }
             case NEWEST -> {
-                trips = tripRepository.findAllByTitleContaining(search, Sort.by(Sort.Direction.DESC, "startDate"));
+                trips = tripRepository.findAllByTitleContainingIgnoreCase(search, Sort.by(Sort.Direction.DESC, "startDate"));
             }
             case OLDEST -> {
-                trips = tripRepository.findAllByTitleContaining(search, Sort.by(Sort.Direction.ASC, "startDate"));
+                trips = tripRepository.findAllByTitleContainingIgnoreCase(search, Sort.by(Sort.Direction.ASC, "startDate"));
             }
             case DIFFICULTY -> {
-                trips = tripRepository.findAllByTitleContaining(search, Sort.by(Sort.Direction.DESC, "rating"));
+                trips = tripRepository.findAllByTitleContainingIgnoreCase(search, Sort.by(Sort.Direction.DESC, "rating"));
             }
         }
 

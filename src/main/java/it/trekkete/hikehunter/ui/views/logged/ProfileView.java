@@ -63,12 +63,8 @@ public class ProfileView extends VerticalLayout {
 
         Long xp = 0L;
 
-        //getStyle().set("background-image", "url('images/background.png')");
-        getStyle().set("background-color", "#00680082");
-        setMinHeight("100%");
-
         VerticalLayout container = new VerticalLayout();
-        container.addClassNames("esplora-view", "main-container");
+        container.setPadding(false);
 
         add(container);
 
@@ -94,9 +90,11 @@ public class ProfileView extends VerticalLayout {
 
         UserExtendedData userExtendedData = new Gson().fromJson(user.getExtendedData(), UserExtendedData.class);
 
+        boolean validExtendedData = userExtendedData != null;
+
         H3 nameLabel = new H3("Nome");
         nameLabel.getStyle().set("color", "gray");
-        H1 name = new H1(userExtendedData.getName() + " " + userExtendedData.getSurname());
+        H1 name = new H1(validExtendedData ? (userExtendedData.getName() + " " + userExtendedData.getSurname()) : user.getUsername());
 
         H3 levelLabel = new H3("Livello");
         levelLabel.getStyle().set("color", "gray");
@@ -145,7 +143,7 @@ public class ProfileView extends VerticalLayout {
 
         Image src = new Image();
 
-        if (userExtendedData.getProfilePicture() != null) {
+        if (validExtendedData && userExtendedData.getProfilePicture() != null) {
             src.setSrc(new StreamResource("profile-picture", () -> new ByteArrayInputStream(userExtendedData.getProfilePicture())));
         }
         else {

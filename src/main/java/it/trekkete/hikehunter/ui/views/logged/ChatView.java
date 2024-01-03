@@ -50,13 +50,12 @@ public class ChatView extends VerticalLayout implements BeforeEnterObserver {
 
     public void constructUI() {
 
-        getStyle().set("background-color", "#00680082");
-        setMinHeight("100%");
-
         VerticalLayout container = new VerticalLayout();
-        container.addClassNames("esplora-view", "main-container");
+        container.setPadding(false);
+        container.setHeight("750px");
 
         add(container);
+        setPadding(false);
 
         List<TripChatMessage> chat = chatRepository.findByTrip(trip.getId(), Sort.by(Sort.Direction.ASC, "ts"));
 
@@ -76,7 +75,7 @@ public class ChatView extends VerticalLayout implements BeforeEnterObserver {
         list.setSizeFull();
 
         Scroller scroller = new Scroller(list);
-        scroller.setMaxHeight("80%");
+        scroller.setMinHeight("90%");
         scroller.setScrollDirection(Scroller.ScrollDirection.VERTICAL);
 
         container.add(scroller);

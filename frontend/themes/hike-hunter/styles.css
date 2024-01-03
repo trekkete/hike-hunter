@@ -5,13 +5,13 @@
 @import url('@fontsource/nunito');
 
 html {
-    --lumo-primary-color-50pct: hsla(122, 66%, 23%, 0.5);
-    --lumo-primary-color-80pct: hsla(122, 66%, 23%, 0.8);
-    --lumo-primary-color-10pct: hsla(122, 66%, 23%, 0.1);
-    --lumo-primary-color: hsl(122, 66%, 23%);
-    --lumo-primary-text-color: hsl(122, 66%, 23%);
-    --lumo-border-radius: calc(var(--lumo-size-m) / 2);
-    --lumo-body-text-color: hsla(120, 40%, 16%, 0.94);
+    --lumo-primary-color-50pct: hsla(0, 100%, 72%, 0.5);
+    --lumo-primary-color-80pct: hsla(0, 100%, 72%, 0.8);
+    --lumo-primary-color-10pct: hsla(0, 100%, 72%, 0.1);
+    --lumo-primary-color: hsl(0, 100%, 72%);
+    --lumo-primary-text-color: hsl(0, 100%, 72%);
+    --lumo-border-radius: 0.25em;
+    --lumo-body-text-color: hsla(0, 40%, 16%, 0.94);
     --lumo-font-family: Nunito;
 }
 

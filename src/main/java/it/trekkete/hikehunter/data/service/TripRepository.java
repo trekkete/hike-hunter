@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -23,7 +22,7 @@ public interface TripRepository extends JpaRepository<Trip, UUID> {
 
     List<Trip> findAllByRatingLessThanEqual(Integer rating);
 
-    List<Trip> findAllByTitleContaining(String title, Sort sort);
+    List<Trip> findAllByTitleContainingIgnoreCase(String title, Sort sort);
 
     @Query(value = "SELECT T.id AS trip, (COALESCE(T.max_participants, 100) - participants.number) AS available FROM trip as T JOIN (SELECT trip, COUNT(user) AS number FROM trip_participants GROUP BY trip) AS participants ON T.id = participants.trip WHERE LOWER(T.title) LIKE %:title% GROUP BY id ORDER BY available DESC", nativeQuery = true)
     List<Object[]> findAllByTitleContainingSortByAvailabilityImpl(@Param("title") String title);
