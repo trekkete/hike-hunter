@@ -165,13 +165,15 @@ public class SearchView extends VerticalLayout {
                         HorizontalLayout imageContainer = new HorizontalLayout();
                         imageContainer.setWidthFull();
                         imageContainer.addClassNames("gap-m", "m-0", "list-none", "p-0");
-                        imageContainer.getStyle().set("overflow-x", "scroll").set("padding", "0 0 1em 0.5em").set("flex-wrap", "wrap");
+                        imageContainer.getStyle().set("flex-wrap", "wrap");
 
                         for (Trip t : trips) {
-                            imageContainer.add(new TripCard(t, authenticatedUser,
+                            TripCard tripCard = new TripCard(t, authenticatedUser,
                                     userRepository, tripParticipantsRepository,
                                     tripLocationRepository, locationRepository,
-                                    isLocalized, userLocation));
+                                    isLocalized, userLocation);
+                            tripCard.setMaxWidth("100%");
+                            imageContainer.add(tripCard);
                         }
 
                         tripContainer.add(imageContainer);

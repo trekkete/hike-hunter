@@ -29,6 +29,7 @@ import it.trekkete.hikehunter.ui.views.general.HomeView;
 import it.trekkete.hikehunter.ui.views.general.SearchView;
 import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
 import it.trekkete.hikehunter.ui.views.logged.ProfileView;
+import it.trekkete.hikehunter.ui.views.login.LoginView;
 import org.apache.catalina.webresources.FileResource;
 
 import java.io.ByteArrayInputStream;
@@ -49,6 +50,8 @@ public class MainLayout extends AppLayout {
 
             addClassNames(LumoUtility.Display.FLEX,
                     LumoUtility.AlignItems.CENTER,
+                    LumoUtility.JustifyContent.CENTER,
+                    LumoUtility.Width.FULL,
                     LumoUtility.Padding.Horizontal.LARGE,
                     LumoUtility.TextColor.SECONDARY);
 
@@ -57,6 +60,24 @@ public class MainLayout extends AppLayout {
             add(icon.create());
             getStyle().set("text-decoration", "none");
             getElement().setAttribute("aria-label", viewName);
+        }
+
+        public MenuItemInfo(Avatar avatar, Class<? extends Component> view) {
+            this.view = view;
+
+            addClassNames(LumoUtility.Display.FLEX,
+                    LumoUtility.AlignItems.CENTER,
+                    LumoUtility.JustifyContent.CENTER,
+                    LumoUtility.Width.FULL,
+                    LumoUtility.Padding.Horizontal.LARGE,
+                    LumoUtility.TextColor.SECONDARY);
+
+            setRoute(view);
+
+            add(avatar);
+            getStyle().set("text-decoration", "none");
+            if (avatar.getName() != null)
+                getElement().setAttribute("aria-label", avatar.getName());
         }
 
         public Class<?> getView() {
@@ -90,8 +111,11 @@ public class MainLayout extends AppLayout {
         clientLogo.setWidthFull();
         clientLogo.setHeight("40px");
         clientLogo.getStyle()
-                .set("object-fit", "contain")
-                .set("margin", "var(--lumo-space-m) var(--lumo-space-l)");
+                .set("object-fit", "contain");
+
+        clientLogo.addClassNames(
+                LumoUtility.Margin.Vertical.XSMALL,
+                LumoUtility.Margin.Horizontal.LARGE);
 
         addToNavbar(clientLogo);
         addToNavbar(true, createNavigation());
@@ -100,33 +124,43 @@ public class MainLayout extends AppLayout {
     private HorizontalLayout createNavigation() {
 
         HorizontalLayout navigation = new HorizontalLayout();
+        navigation.setHeight("40px");
         navigation.addClassNames(
-                LumoUtility.JustifyContent.EVENLY,
+                LumoUtility.Margin.Vertical.XSMALL,
+                LumoUtility.Margin.Horizontal.LARGE,
+                LumoUtility.JustifyContent.START,
                 LumoUtility.AlignItems.CENTER,
                 LumoUtility.Gap.SMALL,
-                LumoUtility.Height.LARGE,
                 LumoUtility.Width.FULL);
 
         for (MenuItemInfo menuItem : createMenuItems()) {
             if (accessChecker.hasAccess(menuItem.getView())) {
                 navigation.add(menuItem);
             }
+            else {
+
+                Span filler = new Span();
+                filler.addClassNames(
+                        LumoUtility.Width.FULL,
+                        LumoUtility.Padding.Horizontal.LARGE);
+
+                navigation.add(filler);
+            }
         }
 
-        return navigation;
-    }
-
-    private Footer createFooter() {
-
-        Footer footer = new Footer();
+        Avatar avatar = new Avatar();
+        avatar.setWidth("26px");
+        avatar.setHeight("26px");
+        avatar.getStyle()
+                .set("border", "2px solid #5e6979")
+                .set("cursor", "pointer");
+        avatar.setImageResource(new StreamResource("auth-pic", () -> getClass().getResourceAsStream("images/user.png")));
 
         Optional<User> maybeUser = authenticatedUser.get();
         if (maybeUser.isPresent()) {
+
             User user = maybeUser.get();
-
             UserExtendedData userExtendedData = new Gson().fromJson(user.getExtendedData(), UserExtendedData.class);
-
-            Avatar avatar = new Avatar();
 
             if (userExtendedData != null) {
                 if (userExtendedData.getName() != null) {
@@ -145,45 +179,13 @@ public class MainLayout extends AppLayout {
 
             avatar.getElement().setAttribute("tabindex", "-1");
 
-            MenuBar userMenu = new MenuBar();
-            userMenu.setThemeName("tertiary-inline contrast");
-
-            MenuItem userName = userMenu.addItem("");
-            Div div = new Div();
-            div.add(avatar);
-            if (userExtendedData != null && userExtendedData.getName() != null)
-                div.add(userExtendedData.getName());
-            else
-                div.add(user.getUsername());
-            div.add(new Icon("lumo", "dropdown"));
-            div.getElement().getStyle().set("display", "flex");
-            div.getElement().getStyle().set("align-items", "center");
-            div.getElement().getStyle().set("gap", "var(--lumo-space-s)");
-            userName.add(div);
-            userName.getSubMenu().addItem("Il tuo profilo", e -> {
-                UI.getCurrent().navigate(ProfileView.class);
-            });
-            userName.getSubMenu().addItem("Sign out", e -> {
-                authenticatedUser.logout();
-            });
-
-            userMenu.getStyle().set("margin", "0em 1em");
-            footer.add(userMenu);
-        } else {
-            FlexLayout authDiv = new FlexLayout();
-            authDiv.getStyle().set("margin", "0em 1em").set("gap", "1em");
-            authDiv.setAlignItems(FlexComponent.Alignment.CENTER);
-
-            Avatar avatar = new Avatar();
-            avatar.getElement().setAttribute("tabindex", "-1");
-
-            Anchor loginLink = new Anchor("login", "Accedi");
-            authDiv.add(avatar, loginLink);
-
-            footer.add(authDiv);
+            navigation.add(new MenuItemInfo(avatar, ProfileView.class));
+        }
+        else {
+            navigation.add(new MenuItemInfo(avatar, LoginView.class));
         }
 
-        return footer;
+        return navigation;
     }
 
     @Override
@@ -194,8 +196,9 @@ public class MainLayout extends AppLayout {
     private MenuItemInfo[] createMenuItems() {
         return new MenuItemInfo[]{ //
                 new MenuItemInfo("ESPLORA", VaadinIcon.GLOBE, HomeView.class), //
-                new MenuItemInfo("CREA", VaadinIcon.LOCATION_ARROW_CIRCLE_O, CreateTripView.class), //
                 new MenuItemInfo("CERCA", VaadinIcon.SEARCH, SearchView.class), //
+                new MenuItemInfo("CREA", VaadinIcon.LOCATION_ARROW_CIRCLE_O, CreateTripView.class), //
+                //new MenuItemInfo("PROFILO", VaadinIcon.USER, ProfileView.class), //
         };
     }
 

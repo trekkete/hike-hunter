@@ -67,11 +67,13 @@ public class HomeView extends VerticalLayout {
 
     private void constructUI() {
 
+        setPadding(false);
+
         VerticalLayout container = new VerticalLayout();
         container.setPadding(false);
 
         H3 header = new H3("Scopri la montagna e parti all'avventura");
-        header.getStyle().set("margin", "0");
+        header.getStyle().set("margin", "0").set("padding", "0.3em");
 
         List<Trip> trips = tripRepository.findAll();
 
@@ -131,7 +133,7 @@ public class HomeView extends VerticalLayout {
 
         VerticalLayout container = new VerticalLayout();
         H5 playlistTitle = new H5(title);
-        playlistTitle.getStyle().set("margin-top", "0");
+        playlistTitle.getStyle().set("margin", "0 0.3em");
 
         container.setWidthFull();
         container.setPadding(false);
