@@ -98,8 +98,9 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
         container.add(separator, tripLocationsTitle);
 
         VerticalLayout locationsMapContainer = new VerticalLayout();
+        locationsMapContainer.setPadding(false);
+        locationsMapContainer.setSpacing(false);
         locationsMapContainer.setWidthFull();
-        locationsMapContainer.setMinHeight("400px");
 
         VerticalLayout locationsContainer = new VerticalLayout();
         locationsContainer.setPadding(false);
@@ -124,9 +125,16 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
             locationMap.put(locations.get(i), locationMarker);
 
-            Span span = new Span(locations.get(i).getName());
+            String complete = locations.get(i).getName();
+            String shortened = complete.substring(0, complete.indexOf(","));
+
+            if (shortened.length() < 3) {
+                shortened = complete.substring(0, complete.indexOf(",", complete.indexOf(",") + 1));
+            }
+
+            Span span = new Span(shortened);
             span.setClassName("trip-location-span");
-            span.setTitle(locations.get(i).getName());
+            span.setTitle(complete);
 
             span.addClickListener(click -> {
 
@@ -184,8 +192,13 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
             }
         });
 
-        if (equipmentLayout.getComponentCount() == 0)
-            equipmentLayout.add(new Span("Nessun materiale particolare richiesto"));
+        if (equipmentLayout.getComponentCount() == 0) {
+            Span noMaterial = new Span("Nessun materiale particolare richiesto");
+            noMaterial.setWidthFull();
+            noMaterial.getStyle().set("text-align", "center");
+
+            equipmentLayout.add(noMaterial);
+        }
 
         container.add(equipmentLayout);
 

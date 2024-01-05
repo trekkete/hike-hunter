@@ -18,6 +18,7 @@ public class ShowMore extends VerticalLayout {
 
         addClassName("show-more-container");
         setPadding(false);
+        setSpacing(false);
 
         String contentId = "show-more-" + UUID.randomUUID();
 
@@ -55,6 +56,6 @@ public class ShowMore extends VerticalLayout {
     }
 
     public void setBaseHeight(String height) {
-        content.setHeight(height);
+        content.setMaxHeight(height);
     }
 }

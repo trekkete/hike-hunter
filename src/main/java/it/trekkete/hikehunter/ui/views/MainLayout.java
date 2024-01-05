@@ -1,79 +1,66 @@
 package it.trekkete.hikehunter.ui.views;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.contextmenu.MenuItem;
-import com.vaadin.flow.component.dependency.JavaScript;
 import com.vaadin.flow.component.dependency.JsModule;
 import com.vaadin.flow.component.dependency.NpmPackage;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.menubar.MenuBar;
-import com.vaadin.flow.component.orderedlayout.FlexComponent;
-import com.vaadin.flow.component.orderedlayout.FlexLayout;
-import com.vaadin.flow.component.orderedlayout.Scroller;
-import com.vaadin.flow.component.page.Page;
+import com.vaadin.flow.component.orderedlayout.*;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.StreamResource;
+import com.vaadin.flow.server.VaadinService;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
+import com.vaadin.flow.theme.lumo.Lumo;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import elemental.json.JsonValue;
 import it.trekkete.hikehunter.data.entity.User;
 import it.trekkete.hikehunter.data.entity.UserExtendedData;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
-import it.trekkete.hikehunter.ui.views.general.AboutView;
 import it.trekkete.hikehunter.ui.views.general.HomeView;
+import it.trekkete.hikehunter.ui.views.general.SearchView;
 import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
 import it.trekkete.hikehunter.ui.views.logged.ProfileView;
+import org.apache.catalina.webresources.FileResource;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.util.Optional;
 
 @JsModule(value = "./js/geolocation.js")
 public class MainLayout extends AppLayout {
 
     private boolean localized;
-    private H2 viewTitle;
 
-    public static class MenuItemInfo extends ListItem {
+    public static class MenuItemInfo extends RouterLink {
 
         private final Class<? extends Component> view;
 
-        public MenuItemInfo(String menuTitle, String iconClass, Class<? extends Component> view) {
+        public MenuItemInfo(String viewName, VaadinIcon icon, Class<? extends Component> view) {
             this.view = view;
-            RouterLink link = new RouterLink();
-            // Use Lumo classnames for various styling
-            link.addClassNames("flex", "gap-xs", "items-center", "px-s", "text-body");
-            link.getStyle().set("margin", "0em 1em").set("align-items", "baseline");
-            link.setRoute(view);
 
-            Span text = new Span(menuTitle);
-            // Use Lumo classnames for various styling
-            text.addClassNames("whitespace-nowrap");
+            addClassNames(LumoUtility.Display.FLEX,
+                    LumoUtility.AlignItems.CENTER,
+                    LumoUtility.Padding.Horizontal.LARGE,
+                    LumoUtility.TextColor.SECONDARY);
 
-            link.add(new LineAwesomeIcon(iconClass), text);
-            add(link);
+            setRoute(view);
+
+            add(icon.create());
+            getStyle().set("text-decoration", "none");
+            getElement().setAttribute("aria-label", viewName);
         }
 
         public Class<?> getView() {
             return view;
-        }
-
-        @NpmPackage(value = "line-awesome", version = "1.3.0")
-        public static class LineAwesomeIcon extends Span {
-            public LineAwesomeIcon(String lineawesomeClassnames) {
-                // Use Lumo classnames for suitable font styling
-                addClassNames("text-secondary");
-                if (!lineawesomeClassnames.isEmpty()) {
-                    addClassNames(lineawesomeClassnames);
-                }
-            }
         }
 
     }
@@ -81,58 +68,52 @@ public class MainLayout extends AppLayout {
     private AuthenticatedUser authenticatedUser;
     private AccessAnnotationChecker accessChecker;
 
+    protected Image clientLogo;
+    protected com.vaadin.flow.component.html.Section section;
+
     public MainLayout(AuthenticatedUser authenticatedUser, AccessAnnotationChecker accessChecker) {
         this.authenticatedUser = authenticatedUser;
         this.accessChecker = accessChecker;
 
-        createHeaderContent();
-        createDrawerContent();
-
-        //getElement().setAttribute("theme", "hike-hunter");
-        setPrimarySection(Section.DRAWER);
-    }
-
-    private void createHeaderContent() {
-
-        DrawerToggle toggle = new DrawerToggle();
-
-        viewTitle = new H2();
-        viewTitle.addClassNames(LumoUtility.FontSize.LARGE, LumoUtility.Margin.NONE);
-
-        addToNavbar(true, toggle, viewTitle);
-    }
-
-    private void createDrawerContent() {
-
-        Scroller scroller = new Scroller();
         if (!isLocalized()) {
             getElement().executeJs("window.trekkete.getLocation();");
         }
 
-        H2 appName = new H2("hike-hunter");
-        appName.getStyle().set("white-space", "nowrap");
-        appName.addClassNames("my-m", "me-auto");
+        createHeaderContent();
 
-        Header header = new Header(appName);
-        header.getStyle().set("text-align", "center");
+        setPrimarySection(Section.NAVBAR);
+    }
 
-        Nav nav = new Nav();
+    private void createHeaderContent() {
 
-        // Wrap the links in a list; improves accessibility
-        UnorderedList list = new UnorderedList();
-        list.addClassNames("gap-s", "list-none", "m-0", "p-0");
-        nav.add(list);
+        clientLogo = new Image("images/default-logo.png", "hike-hunter");
+        clientLogo.setWidthFull();
+        clientLogo.setHeight("40px");
+        clientLogo.getStyle()
+                .set("object-fit", "contain")
+                .set("margin", "var(--lumo-space-m) var(--lumo-space-l)");
+
+        addToNavbar(clientLogo);
+        addToNavbar(true, createNavigation());
+    }
+
+    private HorizontalLayout createNavigation() {
+
+        HorizontalLayout navigation = new HorizontalLayout();
+        navigation.addClassNames(
+                LumoUtility.JustifyContent.EVENLY,
+                LumoUtility.AlignItems.CENTER,
+                LumoUtility.Gap.SMALL,
+                LumoUtility.Height.LARGE,
+                LumoUtility.Width.FULL);
 
         for (MenuItemInfo menuItem : createMenuItems()) {
             if (accessChecker.hasAccess(menuItem.getView())) {
-                list.add(menuItem);
+                navigation.add(menuItem);
             }
         }
 
-        scroller.setContent(nav);
-        scroller.setHeightFull();
-
-        addToDrawer(header, scroller, createFooter());
+        return navigation;
     }
 
     private Footer createFooter() {
@@ -142,7 +123,6 @@ public class MainLayout extends AppLayout {
         Optional<User> maybeUser = authenticatedUser.get();
         if (maybeUser.isPresent()) {
             User user = maybeUser.get();
-
 
             UserExtendedData userExtendedData = new Gson().fromJson(user.getExtendedData(), UserExtendedData.class);
 
@@ -163,7 +143,6 @@ public class MainLayout extends AppLayout {
                 avatar.setName(user.getUsername());
             }
 
-            avatar.setThemeName("xsmall");
             avatar.getElement().setAttribute("tabindex", "-1");
 
             MenuBar userMenu = new MenuBar();
@@ -210,19 +189,13 @@ public class MainLayout extends AppLayout {
     @Override
     protected void afterNavigation() {
         super.afterNavigation();
-        viewTitle.setText(getCurrentPageTitle());
-    }
-
-    private String getCurrentPageTitle() {
-        PageTitle title = getContent().getClass().getAnnotation(PageTitle.class);
-        return title == null ? "" : title.value();
     }
 
     private MenuItemInfo[] createMenuItems() {
         return new MenuItemInfo[]{ //
-                new MenuItemInfo("esplora", "la la-globe", HomeView.class), //
-                new MenuItemInfo("crea un'escursione", "la la-map-marker", CreateTripView.class), //
-                //new MenuItemInfo("come funziona?", "la la-question", AboutView.class), //
+                new MenuItemInfo("ESPLORA", VaadinIcon.GLOBE, HomeView.class), //
+                new MenuItemInfo("CREA", VaadinIcon.LOCATION_ARROW_CIRCLE_O, CreateTripView.class), //
+                new MenuItemInfo("CERCA", VaadinIcon.SEARCH, SearchView.class), //
         };
     }
 

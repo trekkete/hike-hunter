@@ -2,6 +2,7 @@ package it.trekkete.hikehunter.ui.views.general;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -67,18 +68,10 @@ public class HomeView extends VerticalLayout {
     private void constructUI() {
 
         VerticalLayout container = new VerticalLayout();
-        container.setSpacing(false);
         container.setPadding(false);
 
         H3 header = new H3("Scopri la montagna e parti all'avventura");
         header.getStyle().set("margin", "0");
-
-        Button search = new Button("Sfoglia tutte");
-        search.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        search.addClickListener(click -> {
-            UI.getCurrent().navigate(SearchView.class);
-        });
-        search.setWidthFull();
 
         List<Trip> trips = tripRepository.findAll();
 
@@ -120,21 +113,21 @@ public class HomeView extends VerticalLayout {
                     }
                     else {
 
-                        verticalLayout.add(createPlaylist("Le new entry", tripRepository.findAllByOrderByCreationTsDesc()));
-                        verticalLayout.add(createPlaylist("Per iniziare", tripRepository.findAllByRatingLessThanEqual(2)));
+                        createPlaylist(verticalLayout, "Le new entry", tripRepository.findAllByOrderByCreationTsDesc());
+                        createPlaylist(verticalLayout, "Per iniziare", tripRepository.findAllByRatingLessThanEqual(2));
 
                         Optional<User> maybeUser = authenticatedUser.get();
                         if (maybeUser.isPresent()) {
-                            verticalLayout.add(createPlaylist("Mettiti alla prova", trips));
+                            createPlaylist(verticalLayout, "Mettiti alla prova", trips);
                         }
                     }
                 });
 
-        container.add(header, verticalLayout, search);
+        container.add(header, verticalLayout);
         add(container);
     }
 
-    public VerticalLayout createPlaylist(String title, List<Trip> items) {
+    public void createPlaylist(FlexComponent parent, String title, List<Trip> items) {
 
         VerticalLayout container = new VerticalLayout();
         H5 playlistTitle = new H5(title);
@@ -151,10 +144,7 @@ public class HomeView extends VerticalLayout {
         imageContainer.getStyle().set("overflow-x", "scroll").set("padding", "0.3em");
 
         if (items == null || items.isEmpty()) {
-            H4 empty = new H4("Escursioni finite, torna più tardi");
-            empty.getStyle().set("color", "gray");
-
-            imageContainer.add(empty);
+            return;
         }
         else {
             for (Trip t : items) {
@@ -168,6 +158,6 @@ public class HomeView extends VerticalLayout {
 
         container.add(imageContainer);
 
-        return container;
+        parent.add(container);
     }
 }

@@ -5,11 +5,11 @@
 @import url('@fontsource/nunito');
 
 html {
-    --lumo-primary-color-50pct: hsla(0, 100%, 72%, 0.5);
-    --lumo-primary-color-80pct: hsla(0, 100%, 72%, 0.8);
-    --lumo-primary-color-10pct: hsla(0, 100%, 72%, 0.1);
-    --lumo-primary-color: hsl(0, 100%, 72%);
-    --lumo-primary-text-color: hsl(0, 100%, 72%);
+    --lumo-primary-color-50pct: hsla(0, 100%, 62%, 0.5);
+    --lumo-primary-color-80pct: hsla(0, 100%, 62%, 0.8);
+    --lumo-primary-color-10pct: hsla(0, 100%, 62%, 0.1);
+    --lumo-primary-color: hsl(0, 100%, 62%);
+    --lumo-primary-text-color: hsl(0, 100%, 62%);
     --lumo-border-radius: 0.25em;
     --lumo-body-text-color: hsla(0, 40%, 16%, 0.94);
     --lumo-font-family: Nunito;
@@ -72,7 +72,7 @@ html {
 
 .trip-location-container {
     width: 100%;
-    height: 30px;
+    height: 45px;
     justify-content: center;
     align-items: center;
 }
@@ -89,9 +89,8 @@ html {
     cursor: pointer;
     text-align: center;
     text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
     width: 90%;
+    font-weight: bold;
 }
 
 .trip-location-span:hover {
@@ -124,12 +123,11 @@ html {
 }
 
 .show-more-content.open {
-    height: 100% !important;
+    max-height: 100% !important;
 }
 
 .show-more-button-container {
     width: 100%;
-    height: 20px;
     align-items: center;
     justify-content: center;
 }
