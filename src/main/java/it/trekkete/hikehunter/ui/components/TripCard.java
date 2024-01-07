@@ -186,8 +186,11 @@ public class TripCard extends ListItem {
         badge.setText(Trip.formatRating(rating));
 
         switch (rating) {
+            case 1 -> badge.getStyle().set("background-color", "hsla(100, 100%, 35%, 0.1)").set("color", "hsl(100, 100%, 35%)");
+            case 2 -> badge.getStyle().set("background-color", "hsla(200, 100%, 35%, 0.1)").set("color", "hsl(200, 100%, 35%)");
             case 3 -> badge.getStyle().set("background-color", "hsla(47, 100%, 35%, 0.1)").set("color", "hsl(47, 100%, 35%)");
-            case 4, 5 -> badge.getStyle().set("background-color", "hsla(0, 100%, 35%, 0.1)").set("color", "hsl(0, 100%, 35%)");
+            case 4 -> badge.getStyle().set("background-color", "hsla(0, 100%, 35%, 0.1)").set("color", "hsl(0, 100%, 35%)");
+            case 5 -> badge.getStyle().set("background-color", "hsla(0, 0%, 0%, 0.1)").set("color", "hsl(0, 0%, 0%)");
         }
 
         return badge;
@@ -199,7 +202,7 @@ public class TripCard extends ListItem {
 
         UserExtendedData extendedData = new Gson().fromJson(user.getExtendedData(), UserExtendedData.class);
 
-        if (extendedData != null) {
+        if (extendedData != null && extendedData.getName() != null && extendedData.getSurname() != null) {
             return new Span("Proposta da: " + extendedData.getName() + " " + extendedData.getSurname());
         }
         else {

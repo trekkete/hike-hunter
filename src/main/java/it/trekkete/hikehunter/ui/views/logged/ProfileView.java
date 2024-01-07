@@ -17,6 +17,8 @@ import com.vaadin.flow.component.progressbar.ProgressBarVariant;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.tabs.TabsVariant;
+import com.vaadin.flow.component.upload.Upload;
+import com.vaadin.flow.component.upload.receivers.MultiFileMemoryBuffer;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteParameters;
@@ -27,10 +29,15 @@ import it.trekkete.hikehunter.data.service.*;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.components.RatingStars;
 import it.trekkete.hikehunter.ui.views.MainLayout;
+import it.trekkete.hikehunter.utils.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.annotation.security.PermitAll;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,6 +52,7 @@ public class ProfileView extends VerticalLayout {
     private final TripLocationRepository tripLocationRepository;
     private final LocationRepository locationRepository;
     private final UserRatingRepository userRatingRepository;
+    private final UserRepository userRepository;
 
     private VerticalLayout tabContent;
 
@@ -53,13 +61,15 @@ public class ProfileView extends VerticalLayout {
                        @Autowired TripParticipantsRepository tripParticipantsRepository,
                        @Autowired TripLocationRepository tripLocationRepository,
                        @Autowired LocationRepository locationRepository,
-                       @Autowired UserRatingRepository userRatingRepository) {
+                       @Autowired UserRatingRepository userRatingRepository,
+                       @Autowired UserRepository userRepository) {
         this.authenticatedUser = authenticatedUser;
         this.tripRepository = tripRepository;
         this.tripParticipantsRepository = tripParticipantsRepository;
         this.tripLocationRepository = tripLocationRepository;
         this.locationRepository = locationRepository;
         this.userRatingRepository = userRatingRepository;
+        this.userRepository = userRepository;
 
         constructUI();
     }
@@ -106,8 +116,14 @@ public class ProfileView extends VerticalLayout {
         UserExtendedData userExtendedData = new Gson().fromJson(user.getExtendedData(), UserExtendedData.class);
 
         boolean validExtendedData = userExtendedData != null;
+        if (!validExtendedData)
+            userExtendedData = new UserExtendedData();
 
-        H3 name = new H3(validExtendedData ? (userExtendedData.getName() + " " + userExtendedData.getSurname()) : user.getUsername());
+        H3 name = new H3(user.getUsername());
+        if (validExtendedData && userExtendedData.getName() != null && userExtendedData.getSurname() != null){
+            name.setText(userExtendedData.getName() + " " + userExtendedData.getSurname());
+        }
+
         name.getStyle().set("margin", "0");
 
         H5 levelLabel = new H5("Livello");
@@ -156,13 +172,59 @@ public class ProfileView extends VerticalLayout {
         src.setWidth("70px");
 
         if (validExtendedData && userExtendedData.getProfilePicture() != null) {
-            src.setSrc(new StreamResource("profile-picture", () -> new ByteArrayInputStream(userExtendedData.getProfilePicture())));
+            UserExtendedData finalUserExtendedData = userExtendedData;
+            src.setSrc(new StreamResource("profile-picture", () -> {
+                try {
+                    return new ByteArrayInputStream(FileUtils.loadForUser(finalUserExtendedData.getProfilePicture(), user));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
         }
         else {
             src.setSrc("images/user.png");
         }
 
-        image.add(src);
+        MultiFileMemoryBuffer buffer = new MultiFileMemoryBuffer();
+        Upload upload = new Upload(buffer);
+        upload.setAcceptedFileTypes("image/jpeg","image/jpg", "image/png", "image/gif");
+        upload.setDropAllowed(false);
+        upload.setUploadButton(src);
+        upload.setWidth("70px");
+        upload.setHeight("70px");
+        upload.getStyle().set("border-radius", "50%");
+        upload.addClassNames(
+                LumoUtility.Display.FLEX,
+                LumoUtility.AlignItems.CENTER,
+                LumoUtility.JustifyContent.CENTER,
+                LumoUtility.Overflow.HIDDEN
+        );
+
+        image.add(upload);
+
+        UserExtendedData finalUserExtendedData1 = userExtendedData;
+        upload.addSucceededListener(event -> {
+            String attachmentName = event.getFileName();
+            try {
+                // The image can be jpg png or gif, but we store it always as png file in this example
+                BufferedImage inputImage = ImageIO.read(buffer.getInputStream(attachmentName));
+                ByteArrayOutputStream pngContent = new ByteArrayOutputStream();
+                ImageIO.write(inputImage, "png", pngContent);
+
+                src.setSrc(new StreamResource("team", () -> new ByteArrayInputStream(pngContent.toByteArray())));
+
+                String filename = FileUtils.saveForUser(pngContent.toByteArray(), ".png", user, finalUserExtendedData1.getProfilePicture());
+
+                finalUserExtendedData1.setProfilePicture(filename);
+
+                user.setExtendedData(new Gson().toJson(finalUserExtendedData1));
+                userRepository.save(user);
+
+                upload.clearFileList();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
 
         container.add(header);
 
@@ -196,25 +258,25 @@ public class ProfileView extends VerticalLayout {
 
             if (event.getSelectedTab().equals(completedTab)) {
                 for (Trip completed : tripsWithValue) {
-                    tabContent.add(createTripLayout(completed));
+                    tabContent.add(createTripLayout(completed, true));
                 }
             }
             else {
                 for (Trip booked : trips) {
-                    tabContent.add(createTripLayout(booked));
+                    tabContent.add(createTripLayout(booked, false));
                 }
             }
         });
 
         for (Trip booked : trips) {
-            tabContent.add(createTripLayout(booked));
+            tabContent.add(createTripLayout(booked, false));
         }
 
         add(tabs);
         add(tabContent);
     }
 
-    private Component createTripLayout(Trip trip) {
+    private Component createTripLayout(Trip trip, boolean showRating) {
 
         VerticalLayout container = new VerticalLayout();
         container.setWidthFull();
@@ -297,7 +359,11 @@ public class ProfileView extends VerticalLayout {
             dialog.open();
         });
 
-        container.add(new HorizontalLayout(chat, review));
+        HorizontalLayout buttons = new HorizontalLayout(chat);
+        if (showRating)
+            buttons.add(review);
+
+        container.add(buttons);
 
         return container;
     }

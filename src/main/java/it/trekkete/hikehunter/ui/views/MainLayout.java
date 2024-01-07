@@ -30,10 +30,12 @@ import it.trekkete.hikehunter.ui.views.general.SearchView;
 import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
 import it.trekkete.hikehunter.ui.views.logged.ProfileView;
 import it.trekkete.hikehunter.ui.views.login.LoginView;
+import it.trekkete.hikehunter.utils.FileUtils;
 import org.apache.catalina.webresources.FileResource;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.util.Optional;
 
 @JsModule(value = "./js/geolocation.js")
@@ -154,7 +156,7 @@ public class MainLayout extends AppLayout {
         avatar.getStyle()
                 .set("border", "2px solid #5e6979")
                 .set("cursor", "pointer");
-        avatar.setImageResource(new StreamResource("auth-pic", () -> getClass().getResourceAsStream("images/user.png")));
+        avatar.setImageResource(new StreamResource("auth-pic", () -> getClass().getResourceAsStream("/META-INF/resources/images/user.png")));
 
         Optional<User> maybeUser = authenticatedUser.get();
         if (maybeUser.isPresent()) {
@@ -169,7 +171,13 @@ public class MainLayout extends AppLayout {
 
                 if (userExtendedData.getProfilePicture() != null) {
                     StreamResource resource = new StreamResource("profile-pic",
-                            () -> new ByteArrayInputStream(userExtendedData.getProfilePicture()));
+                            () -> {
+                                try {
+                                    return new ByteArrayInputStream(FileUtils.loadForUser(userExtendedData.getProfilePicture(), user));
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            });
                     avatar.setImageResource(resource);
                 }
             }

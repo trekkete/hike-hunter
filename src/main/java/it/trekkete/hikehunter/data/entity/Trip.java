@@ -4,11 +4,17 @@ import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.Table;
 import java.util.UUID;
 
 @Entity
-@Table(name = "trip", catalog = "hike_hunter")
+@Table(name = "trip", catalog = "hike_hunter",
+indexes = {
+        @Index(name = "start_ts_index", columnList = "startDate"),
+        @Index(name = "rating_index", columnList = "rating"),
+        @Index(name = "creator_index", columnList = "creator"),
+})
 public class Trip extends AbstractEntity {
 
     private String title;
@@ -123,5 +129,4 @@ public class Trip extends AbstractEntity {
             default -> 0L;
         };
     }
-
 }

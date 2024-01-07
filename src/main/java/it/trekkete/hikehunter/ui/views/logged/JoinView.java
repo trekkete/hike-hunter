@@ -23,6 +23,8 @@ import it.trekkete.hikehunter.ui.components.ShowMore;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.general.HomeView;
 import it.trekkete.hikehunter.utils.MapUtils;
+import it.trekkete.hikehunter.utils.MyLMap;
+import it.trekkete.hikehunter.utils.OverpassLayer;
 import org.springframework.beans.factory.annotation.Autowired;
 import software.xdev.vaadin.maps.leaflet.flow.LMap;
 import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
@@ -109,9 +111,14 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
         List<TripLocation> tripLocations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
         List<Location> locations = tripLocations.stream().map(tripLocation -> locationRepository.findLocationById(tripLocation.getLocation())).toList();
 
-        LMap map = new LMap();
+        OverpassLayer opLayer = new OverpassLayer(false,
+                "https://overpass-api.de/api/",
+                "nwr[\"to\"=\"Rifugio Vioz \\\"Mantova\\\"\"];out qt;", 8);
+
+        MyLMap map = new MyLMap();
         map.setTileLayer(LTileLayer.DEFAULT_OPENSTREETMAP_TILE);
         map.getElement().executeJs("this.map.options.minZoom = 6;");
+        map.setOverpassLayer(opLayer);
         map.setWidthFull();
         map.setMinHeight(locationsContainer.getMinHeight());
         map.setHeight("300px");

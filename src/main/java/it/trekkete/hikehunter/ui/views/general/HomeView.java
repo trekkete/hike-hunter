@@ -17,9 +17,7 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import elemental.json.JsonValue;
-import it.trekkete.hikehunter.data.entity.Location;
-import it.trekkete.hikehunter.data.entity.Trip;
-import it.trekkete.hikehunter.data.entity.User;
+import it.trekkete.hikehunter.data.entity.*;
 import it.trekkete.hikehunter.data.service.*;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.components.TripCard;
@@ -28,10 +26,7 @@ import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 @PageTitle("Esplora")
 @Route(value = "", layout = MainLayout.class)
@@ -44,6 +39,8 @@ public class HomeView extends VerticalLayout {
     private final UserRepository userRepository;
     private final LocationRepository locationRepository;
     private final TripLocationRepository tripLocationRepository;
+
+    private final TripService tripService;
 
     private boolean isLocalized;
     private Location userLocation;
@@ -62,6 +59,8 @@ public class HomeView extends VerticalLayout {
         this.locationRepository = locationRepository;
         this.tripLocationRepository = tripLocationRepository;
 
+        this.tripService = new TripService(tripRepository);
+
         constructUI();
     }
 
@@ -75,7 +74,38 @@ public class HomeView extends VerticalLayout {
         H3 header = new H3("Scopri la montagna e parti all'avventura");
         header.getStyle().set("margin", "0").set("padding", "0.3em");
 
-        List<Trip> trips = tripRepository.findAll();
+        List<Trip> trips = tripService.findAllAvailable(100);
+        List<Trip> challenge = new ArrayList<>();
+
+        Optional<User> maybeUser = authenticatedUser.get();
+        if (maybeUser.isPresent()) {
+
+            List<Trip> allByUser = tripParticipantsRepository.findAllByUser(maybeUser.get().getId()).stream().map(tripParticipants -> tripRepository.findTripById(tripParticipants.getTrip())).toList();
+
+            int count = allByUser.size();
+
+            int avg = 0;
+            for (Trip trip : allByUser) {
+                avg += trip.getRating();
+            }
+            avg /= count;
+
+            int userScore = (((100 * count) / (1 + count)) + (avg / 5 * 100)) / 2;
+
+            for (Trip trip : trips) {
+
+                List<TripLocation> locations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
+
+                int locationsCount = locations.size();
+
+                int tripScore = (((100 * locationsCount) / (1 + locationsCount)) + (trip.getRating() / 5 * 100)) / 2;
+
+                if (tripScore > userScore && tripScore < userScore + 30) {
+                    challenge.add(trip);
+                }
+            }
+
+        }
 
         VerticalLayout verticalLayout = new VerticalLayout();
         verticalLayout.setPadding(false);
@@ -115,12 +145,15 @@ public class HomeView extends VerticalLayout {
                     }
                     else {
 
-                        createPlaylist(verticalLayout, "Le new entry", tripRepository.findAllByOrderByCreationTsDesc());
-                        createPlaylist(verticalLayout, "Per iniziare", tripRepository.findAllByRatingLessThanEqual(2));
+                        createPlaylist(verticalLayout, "Le new entry", tripService.findNewTrips());
+                        createPlaylist(verticalLayout, "Per iniziare", tripService.findEasyTrips());
 
-                        Optional<User> maybeUser = authenticatedUser.get();
                         if (maybeUser.isPresent()) {
-                            createPlaylist(verticalLayout, "Mettiti alla prova", trips);
+                            createPlaylist(verticalLayout, "Mettiti alla prova", challenge);
+                        }
+
+                        if (isLocalized) {
+                            createPlaylist(verticalLayout, "Vicino a te", tripService.findNearestTrips(userLocation, locationRepository, tripLocationRepository));
                         }
                     }
                 });

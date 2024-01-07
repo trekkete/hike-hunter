@@ -8,7 +8,7 @@ public class UserExtendedData implements Serializable {
     private String surname;
     private String email;
     private String phoneNumber;
-    private byte[] profilePicture;
+    private String profilePicture;
 
     public String getName() {
         return name;
@@ -42,11 +42,11 @@ public class UserExtendedData implements Serializable {
         this.phoneNumber = phoneNumber;
     }
 
-    public byte[] getProfilePicture() {
+    public String getProfilePicture() {
         return profilePicture;
     }
 
-    public void setProfilePicture(byte[] profilePicture) {
+    public void setProfilePicture(String profilePicture) {
         this.profilePicture = profilePicture;
     }
 }

@@ -53,11 +53,12 @@ public class SearchView extends VerticalLayout {
     }
 
     private final AuthenticatedUser authenticatedUser;
-    private final TripRepository tripRepository;
     private final TripParticipantsRepository tripParticipantsRepository;
     private final UserRepository userRepository;
     private final LocationRepository locationRepository;
     private final TripLocationRepository tripLocationRepository;
+
+    private final TripService tripService;
 
     private List<Trip> trips;
     private VerticalLayout tripContainer;
@@ -73,11 +74,12 @@ public class SearchView extends VerticalLayout {
                       @Autowired TripLocationRepository tripLocationRepository) {
 
         this.authenticatedUser = authenticatedUser;
-        this.tripRepository = tripRepository;
         this.tripParticipantsRepository = tripParticipantsRepository;
         this.userRepository = userRepository;
         this.locationRepository = locationRepository;
         this.tripLocationRepository = tripLocationRepository;
+
+        this.tripService = new TripService(tripRepository);
 
         constructUI();
     }
@@ -112,12 +114,10 @@ public class SearchView extends VerticalLayout {
 
         headerContainer.add(searchField, sortBy);
 
-        trips = tripRepository.findAll();
+        trips = tripService.findAllAvailable(150);
 
         tripContainer = new VerticalLayout();
         tripContainer.setPadding(false);
-
-        add(tripContainer);
 
         container.add(header, headerContainer, tripContainer);
         add(container);
@@ -188,16 +188,16 @@ public class SearchView extends VerticalLayout {
 
         switch (sort) {
             case AVAILABILITY -> {
-                trips = tripRepository.findAllByTitleContainingSortByAvailability(search);
+                trips = tripService.findAllWithAvailability(search);
             }
             case NEWEST -> {
-                trips = tripRepository.findAllByTitleContainingIgnoreCase(search, Sort.by(Sort.Direction.DESC, "startDate"));
+                trips = tripService.findAllContaining(search, Sort.by(Sort.Direction.DESC, "startDate"));
             }
             case OLDEST -> {
-                trips = tripRepository.findAllByTitleContainingIgnoreCase(search, Sort.by(Sort.Direction.ASC, "startDate"));
+                trips = tripService.findAllContaining(search, Sort.by(Sort.Direction.ASC, "startDate"));
             }
             case DIFFICULTY -> {
-                trips = tripRepository.findAllByTitleContainingIgnoreCase(search, Sort.by(Sort.Direction.DESC, "rating"));
+                trips = tripService.findAllContaining(search, Sort.by(Sort.Direction.DESC, "rating"));
             }
         }
 
