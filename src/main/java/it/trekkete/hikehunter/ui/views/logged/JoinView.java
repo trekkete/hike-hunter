@@ -111,17 +111,15 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
         List<TripLocation> tripLocations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
         List<Location> locations = tripLocations.stream().map(tripLocation -> locationRepository.findLocationById(tripLocation.getLocation())).toList();
 
-        OverpassLayer opLayer = new OverpassLayer(false,
-                "https://overpass-api.de/api/",
-                "nwr[\"to\"=\"Rifugio Vioz \\\"Mantova\\\"\"];out qt;", 8);
+        //OverpassLayer opLayer = new OverpassLayer(false, "https://overpass-api.de/api/", "area(id:3600046663)->.searchArea;nwr[\"tourism\"=\"museum\"](area.searchArea);out geom;", 8);
 
         MyLMap map = new MyLMap();
-        map.setTileLayer(LTileLayer.DEFAULT_OPENSTREETMAP_TILE);
+        map.setTileLayer(OverpassLayer.DEFAULT_OVERPASS_TILE);
         map.getElement().executeJs("this.map.options.minZoom = 6;");
-        map.setOverpassLayer(opLayer);
         map.setWidthFull();
         map.setMinHeight(locationsContainer.getMinHeight());
         map.setHeight("300px");
+        //map.setOverpassLayer(opLayer);
 
         Map<Location, CustomMarker> locationMap = new HashMap<>();
 

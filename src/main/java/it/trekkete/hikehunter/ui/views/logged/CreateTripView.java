@@ -76,8 +76,8 @@ public class CreateTripView extends VerticalLayout {
 
     private Map<String, String> equipmentMap;
 
-    private Button cancel = new Button("Cancel");
-    private Button save = new Button("Save");
+    private final Button cancel = new Button("Annulla");
+    private final Button save = new Button("Salva");
 
     public CreateTripView(@Autowired AuthenticatedUser authenticatedUser,
                           @Autowired TripRepository tripRepository,

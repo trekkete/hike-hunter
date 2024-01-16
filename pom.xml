@@ -169,6 +169,11 @@
             <artifactId>lucene-spatial</artifactId>
             <version>8.2.0</version>
         </dependency>
+        <dependency>
+            <groupId>de.jfancy</groupId>
+            <artifactId>star-rating</artifactId>
+            <version>1.0.3</version>
+        </dependency>
     </dependencies>
 
     <build>

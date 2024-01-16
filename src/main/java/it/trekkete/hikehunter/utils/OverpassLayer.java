@@ -1,6 +1,10 @@
 package it.trekkete.hikehunter.utils;
 
+import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
+
 public class OverpassLayer {
+
+    public static final LTileLayer DEFAULT_OVERPASS_TILE = new LTileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", "© <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>,POI via <a href=\"http://www.overpass-api.de/\">Overpass API</a>", 18);
 
     private boolean debug;
     private String endpoint;

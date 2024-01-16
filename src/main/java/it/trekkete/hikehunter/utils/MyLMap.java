@@ -7,6 +7,10 @@ import java.nio.charset.StandardCharsets;
 
 public class MyLMap extends LMap {
 
+    public MyLMap() {
+        super();
+    }
+
     public void setOverpassLayer(OverpassLayer overpassLayer) {
 
         String instr =

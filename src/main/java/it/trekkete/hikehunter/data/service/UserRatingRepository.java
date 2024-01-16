@@ -11,6 +11,6 @@ import java.util.UUID;
 public interface UserRatingRepository extends JpaRepository<UserRating, UUID> {
 
     List<UserRating> findAllByFromAndTrip(UUID from, UUID trip);
-
+    List<UserRating> findAllByAboutAndTrip(UUID to, UUID trip);
 
 }

@@ -77,13 +77,55 @@ public class User extends AbstractEntity {
     }
 
     public Integer getLevel(Long xp) {
-        return (int) Math.ceil(Math.sqrt(xp * 2)) + 1;
+        for (int i = 0; i < LEVELS.length; i++) {
+            if (xp < LEVELS[i]) {
+                return i + 1;
+            }
+        }
+
+        return LEVELS.length;
     }
 
-    public Integer getMaxXp(Long xp) {
-
-        Integer level = getLevel(xp);
-
-        return (level * (level + 1)) / 2 * 100;
+    public String getLevelLabel(Integer level) {
+        return LABELS[level - 1];
     }
+
+    public Integer getMaxXp(Integer level) {
+        return LEVELS[level - 1];
+    }
+
+    private static final int[] LEVELS = new int[]{100,300,600,1000,1500,2100,2800,3600,4500,5500,6600,7800,9100,10500,12000,13600,15300,17100,19000,21000,23100,25300,27600,30000,32500,35100,37800,40600,43500,46500};
+
+    private static final String[] LABELS = {
+            "Spirito Selvaggio",
+            "Esploratore della Natura",
+            "Vagabondo Collinare",
+            "Camminatore del Sentiero",
+            "Vedutista delle Meraviglie",
+            "Navigatore Sereno",
+            "Viandante Avvolto dal Vento",
+            "Maestro dell'Arte dei Percorsi",
+            "Eremita del Bosco",
+            "Navigatore delle Alture",
+            "Sogno su Vette e Valli",
+            "Guida dell'Anima Errante",
+            "Custode dei Picchi",
+            "Pioniere dei Sentieri Nascosti",
+            "Guardiano delle Prospettive",
+            "Orientista delle Stelle",
+            "Scalatore delle Cime Celesti",
+            "Curatore della Terra",
+            "Errante dei Luoghi Incontaminati",
+            "Ambasciatore della Natura",
+            "Studioso degli Ecosistemi",
+            "Mago della Sopravvivenza",
+            "Navigatore Notturno",
+            "Condottiero dei Compagni",
+            "Vigilante dell'Altopiano",
+            "Alchimista Ambientale",
+            "Leggendario Naturalista",
+            "Poeta delle Avventure Ecologiche",
+            "Messaggero del Regno Naturale",
+            "Icona del Mondo Naturale"
+    };
 }

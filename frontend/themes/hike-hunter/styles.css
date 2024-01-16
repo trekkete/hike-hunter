@@ -42,6 +42,11 @@ html {
     --lumo-success-text-color: hsl(159, 61%, 40%);
 }
 
+* {
+  --star-size: 0.8em;
+  --star-color: var(--lumo-primary-color);
+}
+
 .option-layout {
     width: 100px;
     height: 100px;

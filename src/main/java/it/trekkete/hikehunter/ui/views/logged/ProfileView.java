@@ -24,10 +24,10 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.theme.lumo.LumoUtility;
+import de.jfancy.StarsRating;
 import it.trekkete.hikehunter.data.entity.*;
 import it.trekkete.hikehunter.data.service.*;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
-import it.trekkete.hikehunter.ui.components.RatingStars;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.utils.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +38,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,6 +56,10 @@ public class ProfileView extends VerticalLayout {
     private final UserRepository userRepository;
 
     private VerticalLayout tabContent;
+
+    private ProgressBar levelProgressBar;
+    private H3 level;
+    private H5 userLevelLabel;
 
     public ProfileView(@Autowired AuthenticatedUser authenticatedUser,
                        @Autowired TripRepository tripRepository,
@@ -89,9 +94,28 @@ public class ProfileView extends VerticalLayout {
         add(container);
 
         List<Trip> trips = tripParticipantsRepository.findAllByUser(user.getId()).stream().map(tripParticipants -> tripRepository.findTripById(tripParticipants.getTrip())).toList();
-        List<Trip> tripsWithValue = tripParticipantsRepository.findAllByUserAndStatus(user.getId(), TripParticipants.Status.OK).stream().map(tripParticipants -> tripRepository.findTripById(tripParticipants.getTrip())).toList();
 
-        for(Trip value : tripsWithValue) {
+        List<Trip> bookedTrips = new ArrayList<>();
+        List<Trip> completedTrips = new ArrayList<>();
+        List<Trip> confirmedTrips = new ArrayList<>();
+
+        for (Trip trip : trips) {
+            if (trip.getStartDate() > System.currentTimeMillis() / 1000) {
+                bookedTrips.add(trip);
+            }
+            else if (trip.getEndDate() < System.currentTimeMillis() / 1000) {
+                List<UserRating> ratings = userRatingRepository.findAllByAboutAndTrip(user.getId(), trip.getId());
+
+                if (ratings != null && !ratings.isEmpty()) {
+                    confirmedTrips.add(trip);
+                }
+                else {
+                    completedTrips.add(trip);
+                }
+            }
+        }
+
+        for(Trip value : confirmedTrips) {
             xp += value.getXp();
         }
 
@@ -129,7 +153,8 @@ public class ProfileView extends VerticalLayout {
         H5 levelLabel = new H5("Livello");
         levelLabel.getStyle().set("color", "gray");
         levelLabel.getStyle().set("margin", "0");
-        H3 level = new H3(String.valueOf(user.getLevel(xp)));
+        Integer currentLevel = user.getLevel(xp);
+        level = new H3(String.valueOf(currentLevel));
         level.getStyle().set("margin", "0");
 
         HorizontalLayout nameLayout = new HorizontalLayout(name);
@@ -142,20 +167,25 @@ public class ProfileView extends VerticalLayout {
         HorizontalLayout levelLayout = new HorizontalLayout(levelLabel, level);
         levelLayout.setAlignItems(Alignment.BASELINE);
 
-        Div progressBarLabel = new Div();
-        progressBarLabel.setText(xp + "/" + user.getMaxXp(xp));
+        userLevelLabel = new H5(user.getLevelLabel(currentLevel));
+        userLevelLabel.getStyle().set("color", "white").set("top", "10px").set("text-shadow", "0px 0px 0.5em gray");
+        userLevelLabel.addClassNames(
+                LumoUtility.Position.ABSOLUTE,
+                LumoUtility.Margin.NONE);
 
-        ProgressBar progressBar = new ProgressBar();
-        progressBar.setMin(0);
-        progressBar.setMax(user.getMaxXp(xp));
-        progressBar.setValue(xp);
-        progressBar.addThemeVariants(ProgressBarVariant.LUMO_SUCCESS);
+        levelProgressBar = new ProgressBar();
+        levelProgressBar.setMin(currentLevel == 1 ? 0 : user.getMaxXp(currentLevel - 1));
+        levelProgressBar.setMax(user.getMaxXp(currentLevel));
+        levelProgressBar.setValue(xp);
+        levelProgressBar.addThemeVariants(ProgressBarVariant.LUMO_SUCCESS);
+        levelProgressBar.setHeight("1.5em");
 
-        VerticalLayout progressBarLayout = new VerticalLayout(progressBarLabel, progressBar);
+        VerticalLayout progressBarLayout = new VerticalLayout(userLevelLabel, levelProgressBar);
         progressBarLayout.setSpacing(false);
         progressBarLayout.setPadding(false);
         progressBarLayout.setWidth("90%");
         progressBarLayout.setAlignItems(Alignment.CENTER);
+        progressBarLayout.addClassNames(LumoUtility.Position.RELATIVE);
 
         VerticalLayout levelBarLayout = new VerticalLayout(levelLayout, progressBarLayout);
         levelBarLayout.setWidthFull();
@@ -228,24 +258,26 @@ public class ProfileView extends VerticalLayout {
 
         container.add(header);
 
-        int completedTrips = 0;
-        int bookedTrips = 0;
-
-        completedTrips = tripsWithValue.size();
-        bookedTrips = trips.size() - completedTrips;
-
         tabContent = new VerticalLayout();
         tabContent.setWidth("97%");
         tabContent.getStyle()
                 .set("background", "linear-gradient(#fff, #fff) 50% 50%/calc(100% - 2px) calc(100% - 2px) no-repeat, linear-gradient(0deg, transparent 0%, #eee 100%)")
                 .set("margin-top", "-1em");
 
-        Tab completedTab = new Tab(new Span("Completati"), createBadge(completedTrips));
-        Tab bookedTab = new Tab(new Span("Prenotati"), createBadge(bookedTrips));
-        bookedTab.getStyle().set("border-right", "1px solid #eee");
+        Tab completedTab = new Tab(new Span(VaadinIcon.HOURGLASS.create()), createBadge(completedTrips.size()));
+        Tab confirmedTab = new Tab(new Span(VaadinIcon.CHECK_SQUARE.create()), createBadge(confirmedTrips.size()));
+        Tab bookedTab = new Tab(new Span(VaadinIcon.CALENDAR.create()), createBadge(bookedTrips.size()));
+        bookedTab.getStyle()
+                .set("border-right", "1px solid #eee")
+                .set("justify-content", "space-evenly");
+        completedTab.getStyle()
+                .set("border-right", "1px solid #eee")
+                .set("justify-content", "space-evenly");
+        confirmedTab.getStyle()
+                .set("justify-content", "space-evenly");
 
-        Tabs tabs = new Tabs(bookedTab, completedTab);
-        tabs.addThemeVariants(TabsVariant.LUMO_EQUAL_WIDTH_TABS);
+        Tabs tabs = new Tabs(bookedTab, completedTab, confirmedTab);
+        tabs.addThemeVariants(TabsVariant.LUMO_EQUAL_WIDTH_TABS, TabsVariant.LUMO_SMALL);
         tabs.setWidth("97%");
         tabs.getStyle()
                 .set("border", "1px solid #eee")
@@ -257,18 +289,23 @@ public class ProfileView extends VerticalLayout {
             tabContent.removeAll();
 
             if (event.getSelectedTab().equals(completedTab)) {
-                for (Trip completed : tripsWithValue) {
+                for (Trip completed : completedTrips) {
                     tabContent.add(createTripLayout(completed, true));
                 }
             }
+            else if (event.getSelectedTab().equals(confirmedTab)) {
+                for (Trip confirmed : confirmedTrips) {
+                    tabContent.add(createTripLayout(confirmed, true));
+                }
+            }
             else {
-                for (Trip booked : trips) {
+                for (Trip booked : bookedTrips) {
                     tabContent.add(createTripLayout(booked, false));
                 }
             }
         });
 
-        for (Trip booked : trips) {
+        for (Trip booked : bookedTrips) {
             tabContent.add(createTripLayout(booked, false));
         }
 
@@ -298,21 +335,34 @@ public class ProfileView extends VerticalLayout {
         Button review = new Button(VaadinIcon.USER_STAR.create());
         review.addClickListener(click -> {
 
+            UUID from = authenticatedUser.get().get().getId();
+
             Dialog dialog = new Dialog();
 
             dialog.setHeaderTitle("Lascia una recensione dei tuoi compagni");
 
             H5 preps = new H5("Preparazione");
 
-            RatingStars prepsStar = new RatingStars();
+            StarsRating prepsStar = new StarsRating();
+            prepsStar.setNumstars(5);
 
             H5 skill = new H5("Abilità");
 
-            RatingStars skillStar = new RatingStars();
+            StarsRating skillStar = new StarsRating();
+            skillStar.setNumstars(5);
 
             H5 sociability = new H5("Socialità");
 
-            RatingStars socStar = new RatingStars();
+            StarsRating socStar = new StarsRating();
+            socStar.setNumstars(5);
+
+            List<UserRating> past = userRatingRepository.findAllByFromAndTrip(from, trip.getId());
+            if (past != null && !past.isEmpty()) {
+                UserRating rating = past.get(0);
+                prepsStar.setValue(rating.getPreparation());
+                skillStar.setValue(rating.getSkill());
+                socStar.setValue(rating.getSociability());
+            }
 
             Button closeButton = new Button(new Icon("lumo", "cross"), (e) -> dialog.close());
             closeButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
@@ -329,8 +379,6 @@ public class ProfileView extends VerticalLayout {
                 participants.forEach( tripParticipants -> {
 
                     UUID about = tripParticipants.getUser();
-
-                    UUID from = authenticatedUser.get().get().getId();
 
                     if (from.equals(about))
                         return;

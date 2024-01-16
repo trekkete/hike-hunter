@@ -26,6 +26,7 @@ import it.trekkete.hikehunter.data.entity.User;
 import it.trekkete.hikehunter.data.entity.UserExtendedData;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.views.general.HomeView;
+import it.trekkete.hikehunter.ui.views.general.MapView;
 import it.trekkete.hikehunter.ui.views.general.SearchView;
 import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
 import it.trekkete.hikehunter.ui.views.logged.ProfileView;
@@ -54,7 +55,7 @@ public class MainLayout extends AppLayout {
                     LumoUtility.AlignItems.CENTER,
                     LumoUtility.JustifyContent.CENTER,
                     LumoUtility.Width.FULL,
-                    LumoUtility.Padding.Horizontal.LARGE,
+                    LumoUtility.Padding.Horizontal.MEDIUM,
                     LumoUtility.TextColor.SECONDARY);
 
             setRoute(view);
@@ -71,7 +72,7 @@ public class MainLayout extends AppLayout {
                     LumoUtility.AlignItems.CENTER,
                     LumoUtility.JustifyContent.CENTER,
                     LumoUtility.Width.FULL,
-                    LumoUtility.Padding.Horizontal.LARGE,
+                    LumoUtility.Padding.Horizontal.MEDIUM,
                     LumoUtility.TextColor.SECONDARY);
 
             setRoute(view);
@@ -97,6 +98,9 @@ public class MainLayout extends AppLayout {
     public MainLayout(AuthenticatedUser authenticatedUser, AccessAnnotationChecker accessChecker) {
         this.authenticatedUser = authenticatedUser;
         this.accessChecker = accessChecker;
+
+        //UI.getCurrent().getPage().addJsModule("https://unpkg.com/leaflet-overpass-layer@2.9.0/dist/OverPassLayer.bundle.js");
+        //UI.getCurrent().getPage().addStyleSheet("https://unpkg.com/leaflet-overpass-layer@2.9.0/dist/OverPassLayer.css");
 
         if (!isLocalized()) {
             getElement().executeJs("window.trekkete.getLocation();");
@@ -204,6 +208,7 @@ public class MainLayout extends AppLayout {
     private MenuItemInfo[] createMenuItems() {
         return new MenuItemInfo[]{ //
                 new MenuItemInfo("ESPLORA", VaadinIcon.GLOBE, HomeView.class), //
+                new MenuItemInfo("MAPPA", VaadinIcon.MAP_MARKER, MapView.class), //
                 new MenuItemInfo("CERCA", VaadinIcon.SEARCH, SearchView.class), //
                 new MenuItemInfo("CREA", VaadinIcon.LOCATION_ARROW_CIRCLE_O, CreateTripView.class), //
                 //new MenuItemInfo("PROFILO", VaadinIcon.USER, ProfileView.class), //
