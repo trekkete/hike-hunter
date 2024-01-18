@@ -22,12 +22,9 @@ import it.trekkete.hikehunter.ui.components.Separator;
 import it.trekkete.hikehunter.ui.components.ShowMore;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.general.HomeView;
-import it.trekkete.hikehunter.utils.MapUtils;
-import it.trekkete.hikehunter.utils.MyLMap;
-import it.trekkete.hikehunter.utils.OverpassLayer;
+import it.trekkete.hikehunter.map.LMap;
+import it.trekkete.hikehunter.map.LOverpassLayer;
 import org.springframework.beans.factory.annotation.Autowired;
-import software.xdev.vaadin.maps.leaflet.flow.LMap;
-import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
 
 import javax.annotation.security.PermitAll;
 import java.time.Instant;
@@ -113,8 +110,8 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
         //OverpassLayer opLayer = new OverpassLayer(false, "https://overpass-api.de/api/", "area(id:3600046663)->.searchArea;nwr[\"tourism\"=\"museum\"](area.searchArea);out geom;", 8);
 
-        MyLMap map = new MyLMap();
-        map.setTileLayer(OverpassLayer.DEFAULT_OVERPASS_TILE);
+        LMap map = new LMap();
+        map.setTileLayer(LOverpassLayer.DEFAULT_OVERPASS_TILE);
         map.getElement().executeJs("this.map.options.minZoom = 6;");
         map.setWidthFull();
         map.setMinHeight(locationsContainer.getMinHeight());
@@ -163,7 +160,7 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
                 locationsContainer.add(new Span(new Icon(VaadinIcon.ANGLE_DOWN)));
         }
 
-        MapUtils.fitBounds(map, locations.toArray(new Location[0]));
+        map.fitBounds(locations.toArray(new Location[0]));
 
         locationsMapContainer.add(locationsContainer, map);
         container.add(locationsMapContainer, new Separator(Separator.Orientation.HORIZONTAL));

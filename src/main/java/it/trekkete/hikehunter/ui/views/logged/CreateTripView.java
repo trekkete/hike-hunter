@@ -5,13 +5,11 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.icon.Icon;
@@ -36,9 +34,9 @@ import it.trekkete.hikehunter.data.service.TripRepository;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.general.HomeView;
+import it.trekkete.hikehunter.map.LMap;
 import it.trekkete.hikehunter.utils.MapUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import software.xdev.vaadin.maps.leaflet.flow.LMap;
 import software.xdev.vaadin.maps.leaflet.flow.data.LMarker;
 import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
 
@@ -268,7 +266,7 @@ public class CreateTripView extends VerticalLayout {
             gridItems.add(clickItem);
             locationGrid.setItems(gridItems);
 
-            MapUtils.fitBounds(map, gridItems.toArray(new Location[0]));
+            map.fitBounds(gridItems.toArray(new Location[0]));
 
             LMarker marker = new LMarker(clickItem.getLatitude(), clickItem.getLongitude());
 
@@ -296,7 +294,7 @@ public class CreateTripView extends VerticalLayout {
             }
         });
 
-        map = new LMap(45, 10, 7);
+        map = new LMap(LMap.Locations.ROME);
         map.setTileLayer(LTileLayer.DEFAULT_OPENSTREETMAP_TILE);
         map.getElement().executeJs("this.map.options.minZoom = 6;");
         map.setSizeFull();
@@ -320,7 +318,7 @@ public class CreateTripView extends VerticalLayout {
                 gridItems.remove(location);
                 locationGrid.setItems(gridItems);
 
-                MapUtils.fitBounds(map, gridItems.toArray(new Location[0]));
+                map.fitBounds(gridItems.toArray(new Location[0]));
                 map.removeLComponents(markerMap.get(location));
 
             });

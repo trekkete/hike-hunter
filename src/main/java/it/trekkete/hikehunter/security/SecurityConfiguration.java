@@ -1,6 +1,8 @@
 package it.trekkete.hikehunter.security;
 
+import com.vaadin.flow.router.RouteConfiguration;
 import com.vaadin.flow.spring.security.VaadinWebSecurity;
+import it.trekkete.hikehunter.ui.views.logged.ProfileView;
 import it.trekkete.hikehunter.ui.views.login.LoginView;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +28,7 @@ public class SecurityConfiguration extends VaadinWebSecurity {
 
         super.configure(http);
         setLoginView(http, LoginView.class, LOGOUT_URL);
+        http.formLogin().defaultSuccessUrl("/profile", true);
     }
 
     @Override

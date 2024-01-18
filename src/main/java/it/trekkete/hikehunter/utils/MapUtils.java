@@ -3,15 +3,17 @@ package it.trekkete.hikehunter.utils;
 import it.trekkete.hikehunter.data.entity.Location;
 import kong.unirest.Unirest;
 import kong.unirest.json.JSONArray;
+import kong.unirest.json.JSONElement;
 import kong.unirest.json.JSONObject;
-import software.xdev.vaadin.maps.leaflet.flow.LMap;
 import software.xdev.vaadin.maps.leaflet.flow.data.LCenter;
 import software.xdev.vaadin.maps.leaflet.flow.data.LMarker;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MapUtils {
 
@@ -87,30 +89,6 @@ public class MapUtils {
         sumLon /= locations.length;
 
         return new LCenter(sumLat, sumLon, 14);
-    }
-
-    public static void fitBounds(LMap map, Location... locations) {
-
-        double minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
-
-        for (int i = 0; i < locations.length; i++) {
-
-            Location loc = locations[i];
-
-            if (loc.getLatitude() < minLat)
-                minLat = loc.getLatitude();
-
-            if (loc.getLatitude() > maxLat)
-                maxLat = loc.getLatitude();
-
-            if (loc.getLongitude() < minLon)
-                minLon = loc.getLongitude();
-
-            if (loc.getLongitude() > maxLon)
-                maxLon = loc.getLongitude();
-        }
-
-        map.getElement().executeJs("this.map.fitBounds([[" + minLat + ", " + minLon + "], [" + maxLat + ", " + maxLon + "]]);");
     }
 
     //TODO

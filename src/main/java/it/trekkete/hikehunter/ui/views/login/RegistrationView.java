@@ -65,6 +65,7 @@ public class RegistrationView extends VerticalLayout {
         setAlignItems(Alignment.CENTER);
         setSizeFull();
         setJustifyContentMode(JustifyContentMode.CENTER);
+        setPadding(false);
 
         add(container);
 

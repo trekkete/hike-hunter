@@ -265,7 +265,7 @@ public class ProfileView extends VerticalLayout {
                 .set("margin-top", "-1em");
 
         Tab completedTab = new Tab(new Span(VaadinIcon.HOURGLASS.create()), createBadge(completedTrips.size()));
-        Tab confirmedTab = new Tab(new Span(VaadinIcon.CHECK_SQUARE.create()), createBadge(confirmedTrips.size()));
+        Tab confirmedTab = new Tab(new Span(VaadinIcon.CHECK.create()), createBadge(confirmedTrips.size()));
         Tab bookedTab = new Tab(new Span(VaadinIcon.CALENDAR.create()), createBadge(bookedTrips.size()));
         bookedTab.getStyle()
                 .set("border-right", "1px solid #eee")

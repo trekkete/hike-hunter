@@ -14,8 +14,8 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.component.orderedlayout.*;
-import com.vaadin.flow.router.PageTitle;
-import com.vaadin.flow.router.RouterLink;
+import com.vaadin.flow.component.page.Page;
+import com.vaadin.flow.router.*;
 import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.VaadinService;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
@@ -29,6 +29,7 @@ import it.trekkete.hikehunter.ui.views.general.HomeView;
 import it.trekkete.hikehunter.ui.views.general.MapView;
 import it.trekkete.hikehunter.ui.views.general.SearchView;
 import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
+import it.trekkete.hikehunter.ui.views.logged.PreferencesView;
 import it.trekkete.hikehunter.ui.views.logged.ProfileView;
 import it.trekkete.hikehunter.ui.views.login.LoginView;
 import it.trekkete.hikehunter.utils.FileUtils;
@@ -40,9 +41,20 @@ import java.io.IOException;
 import java.util.Optional;
 
 @JsModule(value = "./js/geolocation.js")
-public class MainLayout extends AppLayout {
+public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
     private boolean localized;
+
+    @Override
+    public void afterNavigation(AfterNavigationEvent afterNavigationEvent) {
+
+        header.removeAll();
+        header.add(clientLogo);
+
+        if (afterNavigationEvent.getLocation().getFirstSegment().equals(RouteConfiguration.forSessionScope().getUrl(ProfileView.class))) {
+            header.add(preferences);
+        }
+    }
 
     public static class MenuItemInfo extends RouterLink {
 
@@ -92,8 +104,9 @@ public class MainLayout extends AppLayout {
     private AuthenticatedUser authenticatedUser;
     private AccessAnnotationChecker accessChecker;
 
-    protected Image clientLogo;
-    protected com.vaadin.flow.component.html.Section section;
+    private HorizontalLayout header;
+    private RouterLink preferences;
+    private Image clientLogo;
 
     public MainLayout(AuthenticatedUser authenticatedUser, AccessAnnotationChecker accessChecker) {
         this.authenticatedUser = authenticatedUser;
@@ -113,6 +126,19 @@ public class MainLayout extends AppLayout {
 
     private void createHeaderContent() {
 
+        addToNavbar(createHeader());
+        addToNavbar(true, createNavigation());
+    }
+
+    private HorizontalLayout createHeader() {
+
+        header = new HorizontalLayout();
+        header.setHeight("40px");
+        header.addClassNames(
+                LumoUtility.Position.RELATIVE,
+                LumoUtility.Width.FULL,
+                LumoUtility.AlignItems.CENTER);
+
         clientLogo = new Image("images/default-logo.png", "hike-hunter");
         clientLogo.setWidthFull();
         clientLogo.setHeight("40px");
@@ -123,8 +149,22 @@ public class MainLayout extends AppLayout {
                 LumoUtility.Margin.Vertical.XSMALL,
                 LumoUtility.Margin.Horizontal.LARGE);
 
-        addToNavbar(clientLogo);
-        addToNavbar(true, createNavigation());
+        preferences = new RouterLink();
+        preferences.setRoute(PreferencesView.class);
+        preferences.add(VaadinIcon.COG_O.create());
+        preferences.getStyle()
+                .set("text-decoration", "none")
+                .set("right", "10px");
+        preferences.getElement().setAttribute("aria-label", "PREFERENCES");
+        preferences.addClassNames(
+                LumoUtility.Position.ABSOLUTE,
+                LumoUtility.Display.FLEX,
+                LumoUtility.TextColor.SECONDARY);
+
+        header.add(clientLogo);
+
+        return header;
+
     }
 
     private HorizontalLayout createNavigation() {
@@ -140,7 +180,8 @@ public class MainLayout extends AppLayout {
                 LumoUtility.Width.FULL);
 
         for (MenuItemInfo menuItem : createMenuItems()) {
-            if (accessChecker.hasAccess(menuItem.getView())) {
+            navigation.add(menuItem);
+            /*if (accessChecker.hasAccess(menuItem.getView())) {
                 navigation.add(menuItem);
             }
             else {
@@ -151,7 +192,7 @@ public class MainLayout extends AppLayout {
                         LumoUtility.Padding.Horizontal.LARGE);
 
                 navigation.add(filler);
-            }
+            }*/
         }
 
         Avatar avatar = new Avatar();
