@@ -1,27 +1,25 @@
 package it.trekkete.hikehunter.ui.views;
 
+import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
-import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.avatar.Avatar;
-import com.vaadin.flow.component.contextmenu.MenuItem;
 import com.vaadin.flow.component.dependency.JsModule;
-import com.vaadin.flow.component.dependency.NpmPackage;
-import com.vaadin.flow.component.html.*;
+import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
-import com.vaadin.flow.component.menubar.MenuBar;
-import com.vaadin.flow.component.orderedlayout.*;
-import com.vaadin.flow.component.page.Page;
-import com.vaadin.flow.router.*;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.router.AfterNavigationEvent;
+import com.vaadin.flow.router.AfterNavigationObserver;
+import com.vaadin.flow.router.RouteConfiguration;
+import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.StreamResource;
-import com.vaadin.flow.server.VaadinService;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
-import com.vaadin.flow.theme.lumo.Lumo;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import elemental.json.JsonValue;
+import it.trekkete.hikehunter.data.entity.Location;
 import it.trekkete.hikehunter.data.entity.User;
 import it.trekkete.hikehunter.data.entity.UserExtendedData;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
@@ -32,18 +30,23 @@ import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
 import it.trekkete.hikehunter.ui.views.logged.PreferencesView;
 import it.trekkete.hikehunter.ui.views.logged.ProfileView;
 import it.trekkete.hikehunter.ui.views.login.LoginView;
+import it.trekkete.hikehunter.utils.AppEvents;
 import it.trekkete.hikehunter.utils.FileUtils;
-import org.apache.catalina.webresources.FileResource;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @JsModule(value = "./js/geolocation.js")
 public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
     private boolean localized;
+    private final List<PropertyChangeListener> listeners;
+    private final PropertyChangeSupport support;
 
     @Override
     public void afterNavigation(AfterNavigationEvent afterNavigationEvent) {
@@ -60,7 +63,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
         private final Class<? extends Component> view;
 
-        public MenuItemInfo(String viewName, VaadinIcon icon, Class<? extends Component> view) {
+        public MenuItemInfo(String viewName, Icon icon, Class<? extends Component> view) {
             this.view = view;
 
             addClassNames(LumoUtility.Display.FLEX,
@@ -72,7 +75,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
             setRoute(view);
 
-            add(icon.create());
+            add(icon);
             getStyle().set("text-decoration", "none");
             getElement().setAttribute("aria-label", viewName);
         }
@@ -112,9 +115,6 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         this.authenticatedUser = authenticatedUser;
         this.accessChecker = accessChecker;
 
-        //UI.getCurrent().getPage().addJsModule("https://unpkg.com/leaflet-overpass-layer@2.9.0/dist/OverPassLayer.bundle.js");
-        //UI.getCurrent().getPage().addStyleSheet("https://unpkg.com/leaflet-overpass-layer@2.9.0/dist/OverPassLayer.css");
-
         if (!isLocalized()) {
             getElement().executeJs("window.trekkete.getLocation();");
         }
@@ -122,6 +122,9 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         createHeaderContent();
 
         setPrimarySection(Section.NAVBAR);
+
+        support = new PropertyChangeSupport(this);
+        listeners = new ArrayList<>();
     }
 
     private void createHeaderContent() {
@@ -151,7 +154,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
         preferences = new RouterLink();
         preferences.setRoute(PreferencesView.class);
-        preferences.add(VaadinIcon.COG_O.create());
+        preferences.add(FontAwesome.Solid.COG.create());
         preferences.getStyle()
                 .set("text-decoration", "none")
                 .set("right", "10px");
@@ -248,20 +251,20 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
     private MenuItemInfo[] createMenuItems() {
         return new MenuItemInfo[]{ //
-                new MenuItemInfo("ESPLORA", VaadinIcon.GLOBE, HomeView.class), //
-                new MenuItemInfo("MAPPA", VaadinIcon.MAP_MARKER, MapView.class), //
-                new MenuItemInfo("CERCA", VaadinIcon.SEARCH, SearchView.class), //
-                new MenuItemInfo("CREA", VaadinIcon.LOCATION_ARROW_CIRCLE_O, CreateTripView.class), //
+                new MenuItemInfo("ESPLORA", FontAwesome.Solid.HOME.create(), HomeView.class), //
+                new MenuItemInfo("MAPPA", FontAwesome.Solid.MAP_LOCATION_DOT.create(), MapView.class), //
+                new MenuItemInfo("CERCA", FontAwesome.Solid.SEARCH.create(), SearchView.class), //
+                new MenuItemInfo("CREA", FontAwesome.Solid.LOCATION_ARROW.create(), CreateTripView.class), //
                 //new MenuItemInfo("PROFILO", VaadinIcon.USER, ProfileView.class), //
         };
     }
 
-    public static MainLayout getCurrentLayout() {
+    public static Optional<MainLayout> getCurrentLayout() {
 
         if (UI.getCurrent().getChildren().anyMatch(component -> component.getClass() == MainLayout.class)) {
-            return (MainLayout) UI.getCurrent().getChildren().filter(component -> component.getClass() == MainLayout.class).findFirst().get();
+            return Optional.of((MainLayout) UI.getCurrent().getChildren().filter(component -> component.getClass() == MainLayout.class).findFirst().get());
         } else {
-            return null;
+            return Optional.empty();
         }
     }
 
@@ -275,7 +278,40 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         return localized;
     }
 
+    public void getUserLocation () {
+
+        Location userLocation = new Location();
+        getElement().executeJs("return window.trekkete.coords;")
+            .then(JsonValue.class, result -> {
+
+                if (result != null) {
+
+                    JsonObject object = new Gson().fromJson(result.toJson(), JsonObject.class);
+
+                    setLocalized(true);
+
+                    userLocation.setLatitude(object.get("lat").getAsDouble());
+                    userLocation.setLongitude(object.get("lon").getAsDouble());
+
+                    support.firePropertyChange(AppEvents.LOCATION_UPDATE, null, userLocation);
+                } else {
+                    setLocalized(false);
+                }
+            });
+    }
+
     public void setLocalized(boolean localized) {
         this.localized = localized;
+    }
+
+    public void add(PropertyChangeListener listener) {
+        if (!listeners.contains(listener)) {
+            listeners.add(listener);
+            support.addPropertyChangeListener(listener);
+        }
+    }
+
+    public void remove(PropertyChangeListener pcl) {
+        support.removePropertyChangeListener(pcl);
     }
 }

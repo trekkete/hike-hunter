@@ -1,5 +1,6 @@
 package it.trekkete.hikehunter.ui.views.logged;
 
+import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
 import com.google.gson.Gson;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
@@ -9,7 +10,6 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
@@ -264,9 +264,9 @@ public class ProfileView extends VerticalLayout {
                 .set("background", "linear-gradient(#fff, #fff) 50% 50%/calc(100% - 2px) calc(100% - 2px) no-repeat, linear-gradient(0deg, transparent 0%, #eee 100%)")
                 .set("margin-top", "-1em");
 
-        Tab completedTab = new Tab(new Span(VaadinIcon.HOURGLASS.create()), createBadge(completedTrips.size()));
-        Tab confirmedTab = new Tab(new Span(VaadinIcon.CHECK.create()), createBadge(confirmedTrips.size()));
-        Tab bookedTab = new Tab(new Span(VaadinIcon.CALENDAR.create()), createBadge(bookedTrips.size()));
+        Tab completedTab = new Tab(new Span(FontAwesome.Solid.HOURGLASS_HALF.create()), createBadge(completedTrips.size()));
+        Tab confirmedTab = new Tab(new Span(FontAwesome.Solid.CHECK.create()), createBadge(confirmedTrips.size()));
+        Tab bookedTab = new Tab(new Span(FontAwesome.Solid.CALENDAR_DAY.create()), createBadge(bookedTrips.size()));
         bookedTab.getStyle()
                 .set("border-right", "1px solid #eee")
                 .set("justify-content", "space-evenly");
@@ -327,12 +327,12 @@ public class ProfileView extends VerticalLayout {
 
         container.add(title);
 
-        Button chat = new Button(VaadinIcon.CHAT.create());
+        Button chat = new Button(FontAwesome.Solid.MESSAGE.create());
         chat.addClickListener(click -> {
             UI.getCurrent().navigate(ChatView.class, new RouteParameters("tripId", String.valueOf(trip.getId())));
         });
 
-        Button review = new Button(VaadinIcon.USER_STAR.create());
+        Button review = new Button(FontAwesome.Solid.RANKING_STAR.create());
         review.addClickListener(click -> {
 
             UUID from = authenticatedUser.get().get().getId();

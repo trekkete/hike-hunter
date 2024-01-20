@@ -1,5 +1,6 @@
 package it.trekkete.hikehunter.ui.components;
 
+import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
 import com.google.gson.Gson;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
@@ -8,7 +9,6 @@ import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.ListItem;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -141,7 +141,7 @@ public class TripCard extends ListItem {
         boolean isAuthenticated = authenticatedUser.get().isPresent();
 
         if (isAuthenticated && tripParticipantsRepository.findByTripAndUser(trip.getId(), authenticatedUser.get().get().getId()) != null) {
-            Icon icon = new Icon(VaadinIcon.CHECK_CIRCLE);
+            Icon icon = FontAwesome.Solid.CHECK_CIRCLE.create();
             icon.setColor("var(--lumo-primary-color)");
 
             Span span = new Span(icon);

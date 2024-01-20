@@ -1,5 +1,6 @@
 package it.trekkete.hikehunter.ui.views.logged;
 
+import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
 import com.google.gson.Gson;
 import com.googlecode.gentyref.TypeToken;
 import com.vaadin.flow.component.Component;
@@ -9,21 +10,23 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.*;
 import it.trekkete.hikehunter.data.entity.Location;
 import it.trekkete.hikehunter.data.entity.*;
-import it.trekkete.hikehunter.data.service.*;
+import it.trekkete.hikehunter.data.service.LocationRepository;
+import it.trekkete.hikehunter.data.service.TripLocationRepository;
+import it.trekkete.hikehunter.data.service.TripParticipantsRepository;
+import it.trekkete.hikehunter.data.service.TripRepository;
+import it.trekkete.hikehunter.map.LMap;
+import it.trekkete.hikehunter.map.LOverpassLayer;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.components.CustomMarker;
 import it.trekkete.hikehunter.ui.components.Separator;
 import it.trekkete.hikehunter.ui.components.ShowMore;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.general.HomeView;
-import it.trekkete.hikehunter.map.LMap;
-import it.trekkete.hikehunter.map.LOverpassLayer;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.annotation.security.PermitAll;
@@ -157,7 +160,7 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
             locationsContainer.add(horizontalLayout);
 
             if (i < locations.size() - 1)
-                locationsContainer.add(new Span(new Icon(VaadinIcon.ANGLE_DOWN)));
+                locationsContainer.add(new Span(FontAwesome.Solid.ANGLE_DOWN.create()));
         }
 
         map.fitBounds(locations.toArray(new Location[0]));
@@ -206,7 +209,7 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
         container.add(new Separator(Separator.Orientation.HORIZONTAL));
 
-        showChat = new Button(VaadinIcon.CHAT.create());
+        showChat = new Button(FontAwesome.Solid.MESSAGE.create());
         showChat.addClickListener(click -> {
             UI.getCurrent().navigate(ChatView.class, new RouteParameters("tripId", String.valueOf(trip.getId())));
         });
@@ -214,7 +217,7 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
         showChat.setVisible(alreadySubscribed);
 
-        Button join = new Button(alreadySubscribed ? VaadinIcon.CLOSE.create() : VaadinIcon.USER_CHECK.create());
+        Button join = new Button(alreadySubscribed ? FontAwesome.Solid.SIGN_OUT_ALT.create() : FontAwesome.Solid.USER_PLUS.create());
         join.addThemeVariants(ButtonVariant.LUMO_LARGE, alreadySubscribed ? ButtonVariant.LUMO_ERROR : ButtonVariant.LUMO_PRIMARY);
         join.addClickListener(click -> {
 
@@ -241,7 +244,7 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
                     tripParticipantsRepository.save(participants);
 
                     alreadySubscribed = true;
-                    join.setIcon(VaadinIcon.CLOSE.create());
+                    join.setIcon(FontAwesome.Solid.SIGN_OUT_ALT.create());
                     join.removeThemeVariants(ButtonVariant.LUMO_PRIMARY);
                     join.addThemeVariants(ButtonVariant.LUMO_ERROR);
                 }
@@ -251,7 +254,7 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
                     tripParticipantsRepository.delete(participants);
 
                     alreadySubscribed = false;
-                    join.setIcon(VaadinIcon.USER_CHECK.create());
+                    join.setIcon(FontAwesome.Solid.USER_PLUS.create());
                     join.removeThemeVariants(ButtonVariant.LUMO_ERROR);
                     join.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
                 }
@@ -270,7 +273,7 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
         if (user.getId().equals(trip.getCreator())) {
 
-            Button delete = new Button(VaadinIcon.TRASH.create(), buttonClickEvent -> {
+            Button delete = new Button(FontAwesome.Solid.TRASH.create(), buttonClickEvent -> {
 
                 Dialog dialog = new Dialog();
 

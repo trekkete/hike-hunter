@@ -1,5 +1,6 @@
 package it.trekkete.hikehunter.ui.views.logged;
 
+import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
 import com.google.gson.Gson;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
@@ -12,8 +13,6 @@ import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Image;
-import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
@@ -31,10 +30,10 @@ import it.trekkete.hikehunter.data.service.LocationRepository;
 import it.trekkete.hikehunter.data.service.TripLocationRepository;
 import it.trekkete.hikehunter.data.service.TripParticipantsRepository;
 import it.trekkete.hikehunter.data.service.TripRepository;
+import it.trekkete.hikehunter.map.LMap;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.general.HomeView;
-import it.trekkete.hikehunter.map.LMap;
 import it.trekkete.hikehunter.utils.MapUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import software.xdev.vaadin.maps.leaflet.flow.data.LMarker;
@@ -311,7 +310,7 @@ public class CreateTripView extends VerticalLayout {
         locationGrid.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_NO_ROW_BORDERS, GridVariant.LUMO_ROW_STRIPES);
         locationGrid.addComponentColumn(location -> {
 
-            Button delete = new Button(new Icon(VaadinIcon.TRASH));
+            Button delete = new Button(FontAwesome.Solid.TRASH.create());
             delete.addThemeVariants(ButtonVariant.LUMO_ERROR);
             delete.addClickListener(click -> {
 
