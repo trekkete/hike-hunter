@@ -10,8 +10,8 @@ public class Location {
     @Id
     private String id;
     private String name;
-    private double longitude;
-    private double latitude;
+    private Double longitude;
+    private Double latitude;
 
     public String getId() {
         return id;
@@ -30,19 +30,45 @@ public class Location {
         this.name = name;
     }
 
-    public double getLongitude() {
+    public Double getLongitude() {
         return longitude;
     }
 
-    public void setLongitude(double longitude) {
+    public void setLongitude(Double longitude) {
         this.longitude = longitude;
     }
 
-    public double getLatitude() {
+    public Double getLatitude() {
         return latitude;
     }
 
-    public void setLatitude(double latitude) {
+    public void setLatitude(Double latitude) {
         this.latitude = latitude;
+    }
+
+    @Override
+    public String toString() {
+        return "Location{" +
+                "longitude=" + longitude +
+                ", latitude=" + latitude +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Location location = (Location) o;
+
+        if (!longitude.equals(location.longitude)) return false;
+        return latitude.equals(location.latitude);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = longitude.hashCode();
+        result = 31 * result + latitude.hashCode();
+        return result;
     }
 }

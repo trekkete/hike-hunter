@@ -63,9 +63,6 @@ public class SearchView extends VerticalLayout {
     private List<Trip> trips;
     private VerticalLayout tripContainer;
 
-    private boolean isLocalized;
-    private Location userLocation;
-
     public SearchView(@Autowired AuthenticatedUser authenticatedUser,
                        @Autowired TripRepository tripRepository,
                        @Autowired TripParticipantsRepository tripParticipantsRepository,
@@ -129,56 +126,37 @@ public class SearchView extends VerticalLayout {
 
         tripContainer.removeAll();
 
-        getElement().executeJs("return window.trekkete.coords;")
-                .then(JsonValue.class, result -> {
+        if (trips.isEmpty()) {
 
-                    if (result != null) {
+            tripContainer.setAlignItems(FlexComponent.Alignment.CENTER);
+            tripContainer.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
 
-                        JsonObject object = new Gson().fromJson(result.toJson(), JsonObject.class);
+            H3 empty = new H3("Non ci sono escursioni al momento :(");
+            empty.getStyle().set("color", "gray");
 
-                        isLocalized = true;
+            Button create = new Button("Crea un'escursione!");
+            create.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+            create.addClickListener(click -> UI.getCurrent().navigate(CreateTripView.class));
 
-                        userLocation = new Location();
-                        userLocation.setLatitude(object.get("lat").getAsDouble());
-                        userLocation.setLongitude(object.get("lon").getAsDouble());
-                    }
-                    else {
-                        isLocalized = false;
-                    }
+            tripContainer.add(empty, create);
+        }
+        else {
 
-                    if (trips.isEmpty()) {
+            HorizontalLayout imageContainer = new HorizontalLayout();
+            imageContainer.setWidthFull();
+            imageContainer.addClassNames("gap-m", "m-0", "list-none", "p-0");
+            imageContainer.getStyle().set("flex-wrap", "wrap");
 
-                        tripContainer.setAlignItems(FlexComponent.Alignment.CENTER);
-                        tripContainer.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+            for (Trip t : trips) {
+                TripCard tripCard = new TripCard(t, authenticatedUser,
+                        userRepository, tripParticipantsRepository,
+                        tripLocationRepository, locationRepository);
+                tripCard.setMaxWidth("100%");
+                imageContainer.add(tripCard);
+            }
 
-                        H3 empty = new H3("Non ci sono escursioni al momento :(");
-                        empty.getStyle().set("color", "gray");
-
-                        Button create = new Button("Crea un'escursione!");
-                        create.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-                        create.addClickListener(click -> UI.getCurrent().navigate(CreateTripView.class));
-
-                        tripContainer.add(empty, create);
-                    }
-                    else {
-
-                        HorizontalLayout imageContainer = new HorizontalLayout();
-                        imageContainer.setWidthFull();
-                        imageContainer.addClassNames("gap-m", "m-0", "list-none", "p-0");
-                        imageContainer.getStyle().set("flex-wrap", "wrap");
-
-                        for (Trip t : trips) {
-                            TripCard tripCard = new TripCard(t, authenticatedUser,
-                                    userRepository, tripParticipantsRepository,
-                                    tripLocationRepository, locationRepository,
-                                    isLocalized, userLocation);
-                            tripCard.setMaxWidth("100%");
-                            imageContainer.add(tripCard);
-                        }
-
-                        tripContainer.add(imageContainer);
-                    }
-                });
+            tripContainer.add(imageContainer);
+        }
     }
 
     private void filterItems(String search, Sorting sort) {

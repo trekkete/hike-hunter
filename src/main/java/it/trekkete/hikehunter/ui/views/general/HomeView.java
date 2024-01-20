@@ -2,14 +2,13 @@ package it.trekkete.hikehunter.ui.views.general;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.H4;
-import com.vaadin.flow.component.html.H5;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -23,15 +22,19 @@ import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.components.TripCard;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
+import it.trekkete.hikehunter.utils.AppEvents;
+import org.apache.lucene.util.SloppyMath;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.time.ZonedDateTime;
 import java.util.*;
 
 @PageTitle("Esplora")
 @Route(value = "", layout = MainLayout.class)
 @AnonymousAllowed
-public class HomeView extends VerticalLayout {
+public class HomeView extends VerticalLayout implements PropertyChangeListener {
 
     private final AuthenticatedUser authenticatedUser;
     private final TripRepository tripRepository;
@@ -42,8 +45,8 @@ public class HomeView extends VerticalLayout {
 
     private final TripService tripService;
 
-    private boolean isLocalized;
-    private Location userLocation;
+    private final VerticalLayout playlistContainer;
+    private final Map<String, VerticalLayout> playlistMap;
 
     public HomeView(@Autowired AuthenticatedUser authenticatedUser,
                     @Autowired TripRepository tripRepository,
@@ -60,8 +63,28 @@ public class HomeView extends VerticalLayout {
         this.tripLocationRepository = tripLocationRepository;
 
         this.tripService = new TripService(tripRepository);
+        this.playlistContainer = new VerticalLayout();
+        this.playlistMap = new HashMap<>();
+    }
+
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+
+        MainLayout.getCurrentLayout().ifPresent(mainLayout -> {
+            mainLayout.addChangeListener(this);
+            System.out.println("Registered home view to change listener");
+        });
 
         constructUI();
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        super.onDetach(detachEvent);
+
+        MainLayout.getCurrentLayout().ifPresent(mainLayout -> mainLayout.removeChangeListener(this));
+        System.out.println("Unregistered home view to change listener");
     }
 
     private void constructUI() {
@@ -107,62 +130,43 @@ public class HomeView extends VerticalLayout {
 
         }
 
-        VerticalLayout verticalLayout = new VerticalLayout();
-        verticalLayout.setPadding(false);
+        playlistContainer.setPadding(false);
 
-        add(verticalLayout);
+        if (trips.isEmpty()) {
 
-        getElement().executeJs("return window.trekkete.coords;")
-                .then(JsonValue.class, result -> {
+            playlistContainer.setAlignItems(FlexComponent.Alignment.CENTER);
+            playlistContainer.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
 
-                    if (result != null) {
+            H3 empty = new H3("Non ci sono escursioni al momento :(");
+            empty.getStyle().set("color", "gray");
 
-                        JsonObject object = new Gson().fromJson(result.toJson(), JsonObject.class);
+            Button create = new Button("Crea un'escursione!");
+            create.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+            create.addClickListener(click -> UI.getCurrent().navigate(CreateTripView.class));
 
-                        isLocalized = true;
+            playlistContainer.add(empty, create);
+        }
+        else {
 
-                        userLocation = new Location();
-                        userLocation.setLatitude(object.get("lat").getAsDouble());
-                        userLocation.setLongitude(object.get("lon").getAsDouble());
-                    }
-                    else {
-                        isLocalized = false;
-                    }
+            createPlaylist(playlistContainer, "Le new entry", tripService.findNewTrips());
+            createPlaylist(playlistContainer, "Per iniziare", tripService.findEasyTrips());
 
-                    if (trips.isEmpty()) {
+            if (maybeUser.isPresent()) {
+                createPlaylist(playlistContainer, "Mettiti alla prova", challenge);
+            }
+        }
 
-                        verticalLayout.setAlignItems(FlexComponent.Alignment.CENTER);
-                        verticalLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
-
-                        H3 empty = new H3("Non ci sono escursioni al momento :(");
-                        empty.getStyle().set("color", "gray");
-
-                        Button create = new Button("Crea un'escursione!");
-                        create.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-                        create.addClickListener(click -> UI.getCurrent().navigate(CreateTripView.class));
-
-                        verticalLayout.add(empty, create);
-                    }
-                    else {
-
-                        createPlaylist(verticalLayout, "Le new entry", tripService.findNewTrips());
-                        createPlaylist(verticalLayout, "Per iniziare", tripService.findEasyTrips());
-
-                        if (maybeUser.isPresent()) {
-                            createPlaylist(verticalLayout, "Mettiti alla prova", challenge);
-                        }
-
-                        if (isLocalized) {
-                            createPlaylist(verticalLayout, "Vicino a te", tripService.findNearestTrips(userLocation, locationRepository, tripLocationRepository));
-                        }
-                    }
-                });
-
-        container.add(header, verticalLayout);
+        container.add(header, playlistContainer);
         add(container);
+
+        MainLayout.triggerUserLocation().ifPresent(this::update);
     }
 
     public void createPlaylist(FlexComponent parent, String title, List<Trip> items) {
+
+        if (playlistMap.containsKey(title)) {
+            parent.remove(playlistMap.get(title));
+        }
 
         VerticalLayout container = new VerticalLayout();
         H5 playlistTitle = new H5(title);
@@ -186,13 +190,34 @@ public class HomeView extends VerticalLayout {
                 imageContainer.add(
                         new TripCard(t, authenticatedUser,
                                 userRepository, tripParticipantsRepository,
-                                tripLocationRepository, locationRepository,
-                                isLocalized, userLocation));
+                                tripLocationRepository, locationRepository));
             }
         }
 
         container.add(imageContainer);
 
         parent.add(container);
+
+        playlistMap.put(title, container);
+    }
+
+    @Override
+    public void propertyChange(PropertyChangeEvent propertyChangeEvent) {
+        if (propertyChangeEvent.getPropertyName().equals(AppEvents.LOCATION_UPDATE)) {
+
+            Location userLocation = (Location) propertyChangeEvent.getNewValue();
+
+            System.out.println("Received location update event in home view for location: " + userLocation);
+
+            update(userLocation);
+        }
+    }
+
+    private void update(Location userLocation) {
+
+        if (userLocation == null)
+            return;
+
+        createPlaylist(playlistContainer, "Vicino a te", tripService.findNearestTrips(userLocation, locationRepository, tripLocationRepository));
     }
 }

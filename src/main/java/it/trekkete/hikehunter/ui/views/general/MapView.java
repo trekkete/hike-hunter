@@ -2,6 +2,7 @@ package it.trekkete.hikehunter.ui.views.general;
 
 import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
 import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -18,10 +19,13 @@ import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
 import it.trekkete.hikehunter.ui.window.LayersToggleWindow;
 import it.trekkete.hikehunter.utils.AppEvents;
+import org.jboss.jandex.Main;
 import software.xdev.vaadin.maps.leaflet.flow.data.LCenter;
 
+import javax.swing.text.html.Option;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.util.Optional;
 
 @PageTitle("Map")
 @Route(value = "map", layout = MainLayout.class)
@@ -36,9 +40,16 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
     protected void onAttach(AttachEvent attachEvent) {
         super.onAttach(attachEvent);
 
-        MainLayout.getCurrentLayout().ifPresent(mainLayout -> mainLayout.add(this));
+        MainLayout.getCurrentLayout().ifPresent(mainLayout -> mainLayout.addChangeListener(this));
 
         constructUI();
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        super.onDetach(detachEvent);
+
+        MainLayout.getCurrentLayout().ifPresent(mainLayout -> mainLayout.removeChangeListener(this));
     }
 
     private void constructUI() {
@@ -92,7 +103,7 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
                 .set("border-radius", "50%")
                 .set("box-shadow", "0 0 .1em gray");
 
-        here.addClickListener(click -> triggerUserLocation());
+        here.addClickListener(click -> MainLayout.triggerUserLocation().ifPresent(this::update));
 
         VerticalLayout bottomButtonsContainer = new VerticalLayout(here, create);
         bottomButtonsContainer.setPadding(false);
@@ -115,7 +126,7 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
 
         add(buttons);
 
-        triggerUserLocation();
+        MainLayout.triggerUserLocation().ifPresent(this::update);
     }
 
 
@@ -123,14 +134,11 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
     public void propertyChange(PropertyChangeEvent propertyChangeEvent) {
 
         if (propertyChangeEvent.getPropertyName().equals(AppEvents.LOCATION_UPDATE)) {
-
-            Location userLocation = (Location) propertyChangeEvent.getNewValue();
-
-            map.setViewPoint(new LCenter(userLocation.getLatitude(), userLocation.getLongitude(), 10));
+            update((Location) propertyChangeEvent.getNewValue());
         }
     }
 
-    private void triggerUserLocation() {
-        MainLayout.getCurrentLayout().ifPresent(MainLayout::getUserLocation);
+    private void update(Location userLocation) {
+        map.setViewPoint(new LCenter(userLocation.getLatitude(), userLocation.getLongitude(), 10));
     }
 }

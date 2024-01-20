@@ -2,7 +2,9 @@ package it.trekkete.hikehunter.ui.components;
 
 import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
 import com.google.gson.Gson;
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Image;
@@ -19,9 +21,14 @@ import it.trekkete.hikehunter.data.service.TripLocationRepository;
 import it.trekkete.hikehunter.data.service.TripParticipantsRepository;
 import it.trekkete.hikehunter.data.service.UserRepository;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
+import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.logged.JoinView;
+import it.trekkete.hikehunter.utils.AppEvents;
 import org.apache.lucene.util.SloppyMath;
+import software.xdev.vaadin.maps.leaflet.flow.data.LCenter;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -31,9 +38,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
-public class TripCard extends ListItem {
+public class TripCard extends ListItem implements PropertyChangeListener {
 
-    private String[] randoms = new String[] {
+    private final String[] randoms = new String[] {
             "https://images.unsplash.com/photo-1519681393784-d120267933ba?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=750&q=80",
             "https://images.unsplash.com/photo-1512273222628-4daea6e55abb?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=750&q=80",
             "https://images.unsplash.com/photo-1536048810607-3dc7f86981cb?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=375&q=80",
@@ -42,14 +49,49 @@ public class TripCard extends ListItem {
             "https://images.unsplash.com/photo-1562832135-14a35d25edef?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=815&q=80"
     };
 
-    public TripCard(Trip trip,
-                    AuthenticatedUser authenticatedUser,
-                    UserRepository userRepository,
-                    TripParticipantsRepository tripParticipantsRepository,
-                    TripLocationRepository tripLocationRepository,
-                    LocationRepository locationRepository,
-                    boolean isLocalized,
-                    Location userLocation) {
+    private final Trip trip;
+    private final AuthenticatedUser authenticatedUser;
+    private final UserRepository userRepository;
+    private final TripParticipantsRepository tripParticipantsRepository;
+    private final TripLocationRepository tripLocationRepository;
+    private final LocationRepository locationRepository;
+
+    private final Span kms;
+    private final List<TripLocation> tripLocations;
+
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+
+        MainLayout.getCurrentLayout().ifPresent(mainLayout -> {
+            mainLayout.addChangeListener(this);
+            System.out.println("Registered trip '" + trip.getTitle() + "' to change listener");
+        });
+
+        constructUI();
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        super.onDetach(detachEvent);
+
+        MainLayout.getCurrentLayout().ifPresent(mainLayout -> mainLayout.removeChangeListener(this));
+        System.out.println("Unregistered trip '" + trip.getTitle() + "' to change listener");
+    }
+
+    public TripCard(Trip trip, AuthenticatedUser authenticatedUser, UserRepository userRepository, TripParticipantsRepository tripParticipantsRepository, TripLocationRepository tripLocationRepository, LocationRepository locationRepository) {
+        this.trip = trip;
+        this.authenticatedUser = authenticatedUser;
+        this.userRepository = userRepository;
+        this.tripParticipantsRepository = tripParticipantsRepository;
+        this.tripLocationRepository = tripLocationRepository;
+        this.locationRepository = locationRepository;
+
+        this.tripLocations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
+        this.kms = new Span();
+    }
+
+    public void constructUI() {
 
         addClassNames("bg-contrast-5", "flex", "flex-col", "items-start");
         getStyle().set("cursor", "pointer").set("font-size", "0.8em")
@@ -115,20 +157,12 @@ public class TripCard extends ListItem {
         content.getStyle().set("padding", "0.5em");
 
         Span locations = new Span();
-        List<TripLocation> tripLocations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
-        if (tripLocations.size() > 0) {
+        if (!tripLocations.isEmpty()) {
             locations.setText(tripLocations.size() + " itinerari" + (tripLocations.size() == 1 ? "o" : ""));
         }
         content.add(locations);
 
-        Location first = locationRepository.findLocationById(tripLocations.get(0).getLocation());
-
-        if (isLocalized) {
-            double distance = SloppyMath.haversinMeters(userLocation.getLatitude(), userLocation.getLongitude(), first.getLatitude(), first.getLongitude());
-            Span kms = new Span(((int) distance/1000) + " km da te");
-
-            content.add(kms);
-        }
+        content.add(kms);
 
         content.addAndExpand(new Span());
 
@@ -158,6 +192,7 @@ public class TripCard extends ListItem {
 
         add(div, content);
 
+        MainLayout.triggerUserLocation().ifPresent(this::update);
     }
 
     private String getRandomUrl() {
@@ -208,5 +243,34 @@ public class TripCard extends ListItem {
         else {
             return new Span("Proposta da: " + user.getUsername());
         }
+    }
+
+    @Override
+    public void propertyChange(PropertyChangeEvent propertyChangeEvent) {
+
+        if (propertyChangeEvent.getPropertyName().equals(AppEvents.LOCATION_UPDATE)) {
+
+            Location userLocation = (Location) propertyChangeEvent.getNewValue();
+
+            System.out.println("Received location update event in trip card '" + trip.getTitle() + "' for location: " + userLocation);
+
+            update(userLocation);
+        }
+    }
+
+    private void update(Location userLocation) {
+
+        if (tripLocations.isEmpty())
+            return;
+
+        Location first = locationRepository.findLocationById(tripLocations.get(0).getLocation());
+
+        if (userLocation == null || first == null)
+            return;
+
+        double distance = SloppyMath.haversinMeters(userLocation.getLatitude(), userLocation.getLongitude(), first.getLatitude(), first.getLongitude());
+        kms.setText(((int) distance/1000) + " km da te");
+
+        System.out.println("Data is fine for location update, distance: " + ((int) distance/1000) + " km da te");
     }
 }

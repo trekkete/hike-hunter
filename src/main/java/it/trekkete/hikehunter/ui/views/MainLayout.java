@@ -39,6 +39,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @JsModule(value = "./js/geolocation.js")
@@ -47,6 +48,8 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     private boolean localized;
     private final List<PropertyChangeListener> listeners;
     private final PropertyChangeSupport support;
+
+    private final Location lastKnownUserLocation;
 
     @Override
     public void afterNavigation(AfterNavigationEvent afterNavigationEvent) {
@@ -114,17 +117,14 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     public MainLayout(AuthenticatedUser authenticatedUser, AccessAnnotationChecker accessChecker) {
         this.authenticatedUser = authenticatedUser;
         this.accessChecker = accessChecker;
-
-        if (!isLocalized()) {
-            getElement().executeJs("window.trekkete.getLocation();");
-        }
+        this.support = new PropertyChangeSupport(this);
+        this.listeners = new ArrayList<>();
+        this.lastKnownUserLocation = new Location();
+        this.localized = false;
 
         createHeaderContent();
 
         setPrimarySection(Section.NAVBAR);
-
-        support = new PropertyChangeSupport(this);
-        listeners = new ArrayList<>();
     }
 
     private void createHeaderContent() {
@@ -184,18 +184,6 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
         for (MenuItemInfo menuItem : createMenuItems()) {
             navigation.add(menuItem);
-            /*if (accessChecker.hasAccess(menuItem.getView())) {
-                navigation.add(menuItem);
-            }
-            else {
-
-                Span filler = new Span();
-                filler.addClassNames(
-                        LumoUtility.Width.FULL,
-                        LumoUtility.Padding.Horizontal.LARGE);
-
-                navigation.add(filler);
-            }*/
         }
 
         Avatar avatar = new Avatar();
@@ -269,49 +257,76 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     }
 
     public boolean isLocalized() {
-
-        getElement().executeJs("return window.trekkete.coords;")
-                .then(JsonValue.class, result -> {
-                    setLocalized(result != null);
-                });
-
         return localized;
-    }
-
-    public void getUserLocation () {
-
-        Location userLocation = new Location();
-        getElement().executeJs("return window.trekkete.coords;")
-            .then(JsonValue.class, result -> {
-
-                if (result != null) {
-
-                    JsonObject object = new Gson().fromJson(result.toJson(), JsonObject.class);
-
-                    setLocalized(true);
-
-                    userLocation.setLatitude(object.get("lat").getAsDouble());
-                    userLocation.setLongitude(object.get("lon").getAsDouble());
-
-                    support.firePropertyChange(AppEvents.LOCATION_UPDATE, null, userLocation);
-                } else {
-                    setLocalized(false);
-                }
-            });
     }
 
     public void setLocalized(boolean localized) {
         this.localized = localized;
     }
 
-    public void add(PropertyChangeListener listener) {
+    private Optional<Location> getUserLocation() {
+
+        if (!isLocalized()) {
+            getElement().executeJs("window.trekkete.getLocation();");
+        }
+        else {
+            return Optional.of(lastKnownUserLocation);
+        }
+
+        Location userLocation = new Location();
+        getElement().executeJs("return window.trekkete.coords;")
+            .then(JsonValue.class, result -> {
+
+                System.out.println("Location retrieved: " + result);
+
+                if (result == null) {
+                    setLocalized(false);
+                    return;
+                }
+
+                JsonObject object = new Gson().fromJson(result.toJson(), JsonObject.class);
+
+                setLocalized(true);
+
+                userLocation.setLatitude(object.get("lat").getAsDouble());
+                userLocation.setLongitude(object.get("lon").getAsDouble());
+
+                if (lastKnownUserLocation.getLatitude() != null &&
+                    lastKnownUserLocation.getLongitude() != null &&
+                    lastKnownUserLocation.equals(userLocation))
+                    return;
+
+                lastKnownUserLocation.setLatitude(userLocation.getLatitude());
+                lastKnownUserLocation.setLongitude(userLocation.getLongitude());
+
+                System.out.println("Firing location update event for location: " + userLocation + " to " + listeners.size() + " listeners");
+
+                support.firePropertyChange(AppEvents.LOCATION_UPDATE, null, userLocation);
+            });
+
+        return Optional.empty();
+    }
+
+    public void addChangeListener(PropertyChangeListener listener) {
         if (!listeners.contains(listener)) {
             listeners.add(listener);
             support.addPropertyChangeListener(listener);
         }
     }
 
-    public void remove(PropertyChangeListener pcl) {
-        support.removePropertyChangeListener(pcl);
+    public void removeChangeListener(PropertyChangeListener listener) {
+        support.removePropertyChangeListener(listener);
+        listeners.remove(listener);
     }
+
+    public static Optional<Location> triggerUserLocation() {
+        Optional<MainLayout> mainLayout = MainLayout.getCurrentLayout();
+
+        if (mainLayout.isPresent()) {
+            return mainLayout.get().getUserLocation();
+        }
+
+        return Optional.empty();
+    }
+
 }
