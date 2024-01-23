@@ -15,6 +15,7 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.RouteParameters;
+import com.vaadin.flow.server.VaadinSession;
 import it.trekkete.hikehunter.data.entity.*;
 import it.trekkete.hikehunter.data.service.LocationRepository;
 import it.trekkete.hikehunter.data.service.TripLocationRepository;
@@ -148,7 +149,10 @@ public class TripCard extends ListItem implements PropertyChangeListener {
         subtitle.add(getCreatorInfo(trip.getCreator(), userRepository));
 
         addClickListener(click -> {
-           UI.getCurrent().navigate(JoinView.class, new RouteParameters("tripId", String.valueOf(trip.getId())));
+            VaadinSession.getCurrent().getSession().setAttribute("TRIP_ID_REROUTING", String.valueOf(trip.getId()));
+            System.out.println("Saving trip id in session: " + trip.getId());
+
+            UI.getCurrent().navigate(JoinView.class, new RouteParameters("tripId", String.valueOf(trip.getId())));
         });
 
         VerticalLayout content = new VerticalLayout(header, subtitle);

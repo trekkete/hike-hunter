@@ -1,6 +1,7 @@
 package it.trekkete.hikehunter.utils;
 
 import it.trekkete.hikehunter.data.entity.Location;
+import it.trekkete.hikehunter.data.entity.TripLocation;
 import kong.unirest.Unirest;
 import kong.unirest.json.JSONArray;
 import kong.unirest.json.JSONElement;
@@ -91,6 +92,62 @@ public class MapUtils {
         return new LCenter(sumLat, sumLon, 14);
     }
 
-    //TODO
-    public static List<LMarker> route(Location... locations) {return null;}
+    public static JSONObject elementToGeoJson(JSONObject source, String title, String dest, String color) {
+
+        JSONObject geo = new JSONObject();
+        geo.put("type", "Feature");
+        geo.put("geometry", source.get("geometry"));
+
+        JSONObject properties = new JSONObject();
+        properties.put("name", "<div style=\"display: flex; flex-direction: column;\"><div style=\"font-weight: bold; display: flex;\"><span style=\"text-align: center;\">" + title + "</span></div><a href=\"/trip/" + dest + "\">Vedi l'escursione</a></div>");
+
+        JSONObject style = new JSONObject();
+        style.put("color", "#" + color);
+        style.put("weight", "4");
+
+        properties.put("style", style);
+
+        properties.put("radius", 40);
+
+        geo.put("properties", properties);
+
+        return geo;
+    }
+
+    public static JSONObject tripToGeoJson(List<Location> tripLocations, String title, String dest, String color) {
+
+        JSONObject geo = new JSONObject();
+        geo.put("type", "Feature");
+
+        JSONArray coordinates = new JSONArray();
+        tripLocations.forEach(location -> {
+
+            JSONArray node = new JSONArray();
+            node.put(location.getLongitude());
+            node.put(location.getLatitude());
+
+            coordinates.put(node);
+        });
+
+        JSONObject geometry = new JSONObject();
+        geometry.put("type", "LineString");
+        geometry.put("coordinates", coordinates);
+
+        geo.put("geometry", geometry);
+
+        JSONObject properties = new JSONObject();
+        properties.put("name", "<div style=\"display: flex; flex-direction: column;\"><div style=\"font-weight: bold; display: flex;\"><span style=\"text-align: center;\">" + title + "</span></div><a href=\"/trip/" + dest + "\">Vedi l'escursione</a></div>");
+
+        JSONObject style = new JSONObject();
+        style.put("color", "#" + color);
+        style.put("weight", "4");
+
+        properties.put("style", style);
+
+        properties.put("radius", 30);
+
+        geo.put("properties", properties);
+
+        return geo;
+    }
 }

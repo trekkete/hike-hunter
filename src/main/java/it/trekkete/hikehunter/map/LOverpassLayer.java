@@ -1,5 +1,7 @@
 package it.trekkete.hikehunter.map;
 
+import kong.unirest.ContentType;
+import kong.unirest.JsonNode;
 import kong.unirest.Unirest;
 import kong.unirest.json.JSONArray;
 import kong.unirest.json.JSONElement;
@@ -38,13 +40,21 @@ public class LOverpassLayer {
 
         String data = "data=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
 
-        return Unirest.get(endpoint + "?" + data)
-                .asJson().getBody().getObject();
+        JsonNode body = Unirest.post(endpoint)
+                .contentType(ContentType.APPLICATION_FORM_URLENCODED.toString())
+                .body(data)
+                .asJson().getBody();
+
+        if (body != null) {
+            return body.getObject();
+        }
+
+        return null;
     }
 
     private void parseOverPassJSON(JSONObject results) {
 
-        if (results.toString().isEmpty())
+        if (results == null || results.toString().isEmpty())
             return;
 
         if (results.has("elements")) {
@@ -90,6 +100,9 @@ public class LOverpassLayer {
 
                             JSONArray coordinates = new JSONArray();
                             nodesList.forEach(_id -> {
+
+                                if (!nodes.containsKey(String.valueOf(_id)))
+                                    return;
 
                                 JSONObject node = (JSONObject) nodes.get(String.valueOf(_id));
 
@@ -153,15 +166,20 @@ public class LOverpassLayer {
         return nodes;
     }
 
-    public void setNodes(Map<String, JSONElement> nodes) {
-        this.nodes = nodes;
-    }
-
     public Map<String, JSONElement> getWays() {
         return ways;
     }
 
-    public void setWays(Map<String, JSONElement> ways) {
-        this.ways = ways;
+    public JSONElement get(String id) {
+
+        if (nodes.containsKey(id)) {
+            return nodes.get(id);
+        }
+
+        if (ways.containsKey(id)) {
+            return ways.get(id);
+        }
+
+        return null;
     }
 }

@@ -1,6 +1,7 @@
 package it.trekkete.hikehunter.map;
 
 import it.trekkete.hikehunter.data.entity.Location;
+import it.trekkete.hikehunter.data.entity.TripLocation;
 import kong.unirest.json.JSONObject;
 import org.apache.commons.text.StringEscapeUtils;
 import software.xdev.vaadin.maps.leaflet.flow.data.LCenter;
@@ -8,6 +9,7 @@ import software.xdev.vaadin.maps.leaflet.flow.data.LPoint;
 import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LMap extends software.xdev.vaadin.maps.leaflet.flow.LMap {
@@ -69,36 +71,24 @@ public class LMap extends software.xdev.vaadin.maps.leaflet.flow.LMap {
 
         this.getElement().executeJs("if (" + CLIENT_OVERPASS_LAYER + ") {this.map.removeLayer(" + CLIENT_OVERPASS_LAYER + ");}");
         this.getElement().executeJs(CLIENT_OVERPASS_LAYER + "=new L.GeoJSON(null, {" +
+                "pointToLayer: (feature, latlng) => {" +
+                "if (feature.properties.radius) {" +
+                "return new L.Circle(latlng, feature.properties.radius);" +
+                "} else {" +
+                "return new L.Marker(latlng);" +
+                "}" +
+                "}," +
                 "onEachFeature: function(e, layer) {" +
                 "if (e.properties && e.properties.name) layer.bindPopup(e.properties.name);" +
                 "if (e.properties && e.properties.style) layer.setStyle(e.properties.style);" +
                 "}" +
                 "});");
 
-        overpassLayer.getWays().forEach((k, w) -> {
-
-            JSONObject way = (JSONObject) w;
-
-            JSONObject geo = new JSONObject();
-            geo.put("type", "Feature");
-            geo.put("geometry", way.get("geometry"));
-
-            JSONObject properties = new JSONObject();
-            properties.put("name", String.valueOf(way.get("id")));
-
-            JSONObject style = new JSONObject();
-            style.put("color", "#00AA00");
-            style.put("weight", "4");
-
-            properties.put("style", style);
-
-            geo.put("properties", properties);
-
-            this.getElement().executeJs(CLIENT_OVERPASS_LAYER + ".addData(" + geo + ");");
-
-        });
-
         this.getElement().executeJs("this.map.addLayer(" + CLIENT_OVERPASS_LAYER + ");");
+    }
+
+    public void addData(JSONObject geojson) {
+        this.getElement().executeJs(CLIENT_OVERPASS_LAYER + ".addData(" + geojson + ");");
     }
 
     public void fitBounds(Location... locations) {

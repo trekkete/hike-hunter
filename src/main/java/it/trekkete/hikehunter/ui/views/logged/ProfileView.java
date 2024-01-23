@@ -19,10 +19,9 @@ import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.tabs.TabsVariant;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.component.upload.receivers.MultiFileMemoryBuffer;
-import com.vaadin.flow.router.PageTitle;
-import com.vaadin.flow.router.Route;
-import com.vaadin.flow.router.RouteParameters;
+import com.vaadin.flow.router.*;
 import com.vaadin.flow.server.StreamResource;
+import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import de.jfancy.StarsRating;
 import it.trekkete.hikehunter.data.entity.*;
@@ -45,7 +44,7 @@ import java.util.UUID;
 @PageTitle("Profilo")
 @Route(value = "profile", layout = MainLayout.class)
 @PermitAll
-public class ProfileView extends VerticalLayout {
+public class ProfileView extends VerticalLayout implements BeforeEnterObserver {
 
     private final TripRepository tripRepository;
     private final TripParticipantsRepository tripParticipantsRepository;
@@ -421,5 +420,21 @@ public class ProfileView extends VerticalLayout {
         badge.getElement().getThemeList().add("badge small contrast");
         badge.getStyle().set("margin-inline-start", "var(--lumo-space-xs)");
         return badge;
+    }
+
+
+    @Override
+    public void beforeEnter(BeforeEnterEvent beforeEnterEvent) {
+
+        String tripId = (String) VaadinSession.getCurrent().getSession().getAttribute("TRIP_ID_REROUTING");
+
+        System.out.println("Retrieving trip id from session: " + tripId);
+        if (tripId == null)
+            return;
+
+        VaadinSession.getCurrent().getSession().removeAttribute("TRIP_ID_REROUTING");
+        System.out.println("Removed trip id from session: " + tripId);
+
+        beforeEnterEvent.rerouteTo(JoinView.class, new RouteParameters("tripId", tripId));
     }
 }

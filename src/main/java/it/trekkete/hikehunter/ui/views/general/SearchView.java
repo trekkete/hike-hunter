@@ -87,14 +87,13 @@ public class SearchView extends VerticalLayout {
 
         VerticalLayout container = new VerticalLayout();
         container.setPadding(false);
-        container.setAlignItems(Alignment.CENTER);
 
         FormLayout headerContainer = new FormLayout();
         headerContainer.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("500px", 2));
 
-        H2 header = new H2("Cerca tra tutte le escursioni");
+        H3 header = new H3("Cerca tra tutte le escursioni");
         header.getStyle().set("margin", "0");
 
         TextField searchField = new TextField("Nome escursione");
