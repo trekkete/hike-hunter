@@ -16,6 +16,7 @@ import com.vaadin.flow.router.AfterNavigationObserver;
 import com.vaadin.flow.router.RouteConfiguration;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.StreamResource;
+import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import elemental.json.JsonValue;
@@ -32,6 +33,8 @@ import it.trekkete.hikehunter.ui.views.logged.ProfileView;
 import it.trekkete.hikehunter.ui.views.login.LoginView;
 import it.trekkete.hikehunter.utils.AppEvents;
 import it.trekkete.hikehunter.utils.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -45,11 +48,16 @@ import java.util.Optional;
 @JsModule(value = "./js/geolocation.js")
 public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
+    private final Logger log = LogManager.getLogger(MainLayout.class);
+
     private boolean localized;
     private final List<PropertyChangeListener> listeners;
     private final PropertyChangeSupport support;
 
     private final Location lastKnownUserLocation;
+
+    private AuthenticatedUser authenticatedUser;
+    private AccessAnnotationChecker accessChecker;
 
     @Override
     public void afterNavigation(AfterNavigationEvent afterNavigationEvent) {
@@ -64,10 +72,14 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
     public static class MenuItemInfo extends RouterLink {
 
-        private final Class<? extends Component> view;
+        private final Logger log = LogManager.getLogger(MenuItemInfo.class);
 
-        public MenuItemInfo(String viewName, Icon icon, Class<? extends Component> view) {
+        private final Class<? extends Component> view;
+        private final AuthenticatedUser authenticatedUser;
+
+        public MenuItemInfo(String viewName, Icon icon, Class<? extends Component> view, AuthenticatedUser authenticatedUser) {
             this.view = view;
+            this.authenticatedUser = authenticatedUser;
 
             addClassNames(LumoUtility.Display.FLEX,
                     LumoUtility.AlignItems.CENTER,
@@ -83,8 +95,9 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
             getElement().setAttribute("aria-label", viewName);
         }
 
-        public MenuItemInfo(Avatar avatar, Class<? extends Component> view) {
+        public MenuItemInfo(Avatar avatar, Class<? extends Component> view, AuthenticatedUser authenticatedUser) {
             this.view = view;
+            this.authenticatedUser = authenticatedUser;
 
             addClassNames(LumoUtility.Display.FLEX,
                     LumoUtility.AlignItems.CENTER,
@@ -101,14 +114,23 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
                 getElement().setAttribute("aria-label", avatar.getName());
         }
 
+        @Override
+        public void afterNavigation(AfterNavigationEvent event) {
+
+            if (authenticatedUser.get().isPresent())
+                return;
+
+            if (view.getSimpleName().equals(CreateTripView.class.getSimpleName())) {
+                VaadinSession.getCurrent().getSession().setAttribute(AppEvents.REROUTING_NEW_TRIP, "true");
+                log.trace("Saving '{}' in session", AppEvents.REROUTING_NEW_TRIP);
+            }
+        }
+
         public Class<?> getView() {
             return view;
         }
 
     }
-
-    private AuthenticatedUser authenticatedUser;
-    private AccessAnnotationChecker accessChecker;
 
     private HorizontalLayout header;
     private RouterLink preferences;
@@ -223,10 +245,10 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
             avatar.getElement().setAttribute("tabindex", "-1");
 
-            navigation.add(new MenuItemInfo(avatar, ProfileView.class));
+            navigation.add(new MenuItemInfo(avatar, ProfileView.class, authenticatedUser));
         }
         else {
-            navigation.add(new MenuItemInfo(avatar, LoginView.class));
+            navigation.add(new MenuItemInfo(avatar, LoginView.class, authenticatedUser));
         }
 
         return navigation;
@@ -239,10 +261,10 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
     private MenuItemInfo[] createMenuItems() {
         return new MenuItemInfo[]{ //
-                new MenuItemInfo("ESPLORA", FontAwesome.Solid.HOME.create(), HomeView.class), //
-                new MenuItemInfo("MAPPA", FontAwesome.Solid.MAP_LOCATION_DOT.create(), MapView.class), //
-                new MenuItemInfo("CERCA", FontAwesome.Solid.SEARCH.create(), SearchView.class), //
-                new MenuItemInfo("CREA", FontAwesome.Solid.LOCATION_ARROW.create(), CreateTripView.class), //
+                new MenuItemInfo("ESPLORA", FontAwesome.Solid.HOME.create(), HomeView.class, authenticatedUser), //
+                new MenuItemInfo("MAPPA", FontAwesome.Solid.MAP_LOCATION_DOT.create(), MapView.class, authenticatedUser), //
+                new MenuItemInfo("CERCA", FontAwesome.Solid.SEARCH.create(), SearchView.class, authenticatedUser), //
+                new MenuItemInfo("CREA", FontAwesome.Solid.LOCATION_ARROW.create(), CreateTripView.class, authenticatedUser), //
                 //new MenuItemInfo("PROFILO", VaadinIcon.USER, ProfileView.class), //
         };
     }
@@ -277,7 +299,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         getElement().executeJs("return window.trekkete.coords;")
             .then(JsonValue.class, result -> {
 
-                System.out.println("Location retrieved: " + result);
+                log.trace("Location retrieved: {}", result);
 
                 if (result == null) {
                     setLocalized(false);
@@ -299,7 +321,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
                 lastKnownUserLocation.setLatitude(userLocation.getLatitude());
                 lastKnownUserLocation.setLongitude(userLocation.getLongitude());
 
-                System.out.println("Firing location update event for location: " + userLocation + " to " + listeners.size() + " listeners");
+                log.trace("Firing location update event for location '{}' to {} listeners", userLocation, listeners.size());
 
                 support.firePropertyChange(AppEvents.LOCATION_UPDATE, null, userLocation);
             });

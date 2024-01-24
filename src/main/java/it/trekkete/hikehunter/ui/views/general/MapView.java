@@ -10,6 +10,7 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import it.trekkete.hikehunter.data.entity.Location;
@@ -23,12 +24,15 @@ import it.trekkete.hikehunter.map.LMap;
 import it.trekkete.hikehunter.map.LOverpassLayer;
 import it.trekkete.hikehunter.overpass.OverpassQueryBuilder;
 import it.trekkete.hikehunter.overpass.OverpassQueryOptions;
+import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
 import it.trekkete.hikehunter.ui.window.LayersToggleWindow;
 import it.trekkete.hikehunter.utils.AppEvents;
 import it.trekkete.hikehunter.utils.MapUtils;
 import kong.unirest.json.JSONObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import software.xdev.vaadin.maps.leaflet.flow.data.LCenter;
 
@@ -42,15 +46,20 @@ import java.util.Random;
 @AnonymousAllowed
 public class MapView extends VerticalLayout implements PropertyChangeListener {
 
+    private final Logger log = LogManager.getLogger(MapView.class);
+
     private LMap map;
 
+    private final AuthenticatedUser authenticatedUser;
     private final TripService tripService;
     private final TripLocationRepository tripLocationRepository;
     private final LocationRepository locationRepository;
 
-    public MapView(@Autowired TripRepository tripRepository,
+    public MapView(@Autowired AuthenticatedUser authenticatedUser,
+                   @Autowired TripRepository tripRepository,
                    @Autowired LocationRepository locationRepository,
                    @Autowired TripLocationRepository tripLocationRepository) {
+        this.authenticatedUser = authenticatedUser;
         this.tripService = new TripService(tripRepository);
         this.locationRepository = locationRepository;
         this.tripLocationRepository = tripLocationRepository;
@@ -60,7 +69,10 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
     protected void onAttach(AttachEvent attachEvent) {
         super.onAttach(attachEvent);
 
-        MainLayout.getCurrentLayout().ifPresent(mainLayout -> mainLayout.addChangeListener(this));
+        MainLayout.getCurrentLayout().ifPresent(mainLayout -> {
+            mainLayout.addChangeListener(this);
+            log.trace("Registered {} to change listener", this.getClass().getSimpleName());
+        });
 
         constructUI();
     }
@@ -69,7 +81,10 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
     protected void onDetach(DetachEvent detachEvent) {
         super.onDetach(detachEvent);
 
-        MainLayout.getCurrentLayout().ifPresent(mainLayout -> mainLayout.removeChangeListener(this));
+        MainLayout.getCurrentLayout().ifPresent(mainLayout -> {
+            mainLayout.removeChangeListener(this);
+            log.trace("Unregistered {} to change listener", this.getClass().getSimpleName());
+        });
     }
 
     private void constructUI() {
@@ -154,6 +169,13 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
                 .set("border-radius", "1em");
 
         create.addClickListener(click -> {
+
+            if (authenticatedUser.get().isPresent())
+                return;
+
+            VaadinSession.getCurrent().getSession().setAttribute(AppEvents.REROUTING_NEW_TRIP, "true");
+            log.trace("Saving '{}' in session", AppEvents.REROUTING_NEW_TRIP);
+
             UI.getCurrent().navigate(CreateTripView.class);
         });
 

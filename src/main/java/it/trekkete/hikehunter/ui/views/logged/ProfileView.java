@@ -22,13 +22,18 @@ import com.vaadin.flow.component.upload.receivers.MultiFileMemoryBuffer;
 import com.vaadin.flow.router.*;
 import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.VaadinSession;
+import com.vaadin.flow.server.WrappedSession;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import de.jfancy.StarsRating;
 import it.trekkete.hikehunter.data.entity.*;
 import it.trekkete.hikehunter.data.service.*;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
+import it.trekkete.hikehunter.ui.components.TripCard;
 import it.trekkete.hikehunter.ui.views.MainLayout;
+import it.trekkete.hikehunter.utils.AppEvents;
 import it.trekkete.hikehunter.utils.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.annotation.security.PermitAll;
@@ -45,6 +50,8 @@ import java.util.UUID;
 @Route(value = "profile", layout = MainLayout.class)
 @PermitAll
 public class ProfileView extends VerticalLayout implements BeforeEnterObserver {
+
+    private final Logger log = LogManager.getLogger(ProfileView.class);
 
     private final TripRepository tripRepository;
     private final TripParticipantsRepository tripParticipantsRepository;
@@ -426,15 +433,35 @@ public class ProfileView extends VerticalLayout implements BeforeEnterObserver {
     @Override
     public void beforeEnter(BeforeEnterEvent beforeEnterEvent) {
 
-        String tripId = (String) VaadinSession.getCurrent().getSession().getAttribute("TRIP_ID_REROUTING");
+        WrappedSession session = VaadinSession.getCurrent().getSession();
 
-        System.out.println("Retrieving trip id from session: " + tripId);
-        if (tripId == null)
+        // controllo se sto provando ad andare nella pagina di un escursione
+        String tripId = (String) session.getAttribute(AppEvents.REROUTING_TRIP);
+        if (tripId != null && !tripId.isEmpty()) {
+
+            log.trace("Found '{}' saved in session with value: {}", AppEvents.REROUTING_TRIP, tripId);
+
+            // rimuovo il parametro in sessione
+            session.removeAttribute(AppEvents.REROUTING_TRIP);
+            session.removeAttribute(AppEvents.REROUTING_NEW_TRIP);
+            log.trace("Removed '{}' from session: {}", AppEvents.REROUTING_TRIP, tripId);
+
+            beforeEnterEvent.rerouteTo(JoinView.class, new RouteParameters("tripId", tripId));
             return;
+        }
 
-        VaadinSession.getCurrent().getSession().removeAttribute("TRIP_ID_REROUTING");
-        System.out.println("Removed trip id from session: " + tripId);
+        String newTrip = (String) session.getAttribute(AppEvents.REROUTING_NEW_TRIP);
+        if (newTrip != null && !newTrip.isEmpty()){
 
-        beforeEnterEvent.rerouteTo(JoinView.class, new RouteParameters("tripId", tripId));
+            log.trace("Found '{}' saved in session with value: {}", AppEvents.REROUTING_NEW_TRIP, newTrip);
+
+            // rimuovo il parametro in sessione
+            session.removeAttribute(AppEvents.REROUTING_NEW_TRIP);
+            session.removeAttribute(AppEvents.REROUTING_TRIP);
+            log.trace("Removed '{}' attribute from session", AppEvents.REROUTING_NEW_TRIP);
+
+            beforeEnterEvent.rerouteTo(CreateTripView.class);
+            return;
+        }
     }
 }

@@ -1,40 +1,42 @@
 package it.trekkete.hikehunter.ui.views.general;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import com.vaadin.flow.component.AttachEvent;
-import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.html.*;
+import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.H5;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
-import elemental.json.JsonValue;
-import it.trekkete.hikehunter.data.entity.*;
+import it.trekkete.hikehunter.data.entity.Location;
+import it.trekkete.hikehunter.data.entity.Trip;
+import it.trekkete.hikehunter.data.entity.TripLocation;
+import it.trekkete.hikehunter.data.entity.User;
 import it.trekkete.hikehunter.data.service.*;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.components.TripCard;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
 import it.trekkete.hikehunter.utils.AppEvents;
-import org.apache.lucene.util.SloppyMath;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.time.ZonedDateTime;
 import java.util.*;
 
 @PageTitle("Esplora")
 @Route(value = "", layout = MainLayout.class)
 @AnonymousAllowed
 public class HomeView extends VerticalLayout implements PropertyChangeListener {
+
+    private final Logger log = LogManager.getLogger(HomeView.class);
 
     private final AuthenticatedUser authenticatedUser;
     private final TripRepository tripRepository;
@@ -73,7 +75,7 @@ public class HomeView extends VerticalLayout implements PropertyChangeListener {
 
         MainLayout.getCurrentLayout().ifPresent(mainLayout -> {
             mainLayout.addChangeListener(this);
-            System.out.println("Registered home view to change listener");
+            log.trace("Registered {} to change listener", this.getClass().getSimpleName());
         });
 
         constructUI();
@@ -83,8 +85,11 @@ public class HomeView extends VerticalLayout implements PropertyChangeListener {
     protected void onDetach(DetachEvent detachEvent) {
         super.onDetach(detachEvent);
 
-        MainLayout.getCurrentLayout().ifPresent(mainLayout -> mainLayout.removeChangeListener(this));
-        System.out.println("Unregistered home view to change listener");
+        MainLayout.getCurrentLayout().ifPresent(mainLayout -> {
+            mainLayout.removeChangeListener(this);
+            log.trace("Unregistered {} to change listener", this.getClass().getSimpleName());
+        });
+
     }
 
     private void constructUI() {

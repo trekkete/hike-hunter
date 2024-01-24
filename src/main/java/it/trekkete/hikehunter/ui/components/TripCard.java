@@ -23,8 +23,11 @@ import it.trekkete.hikehunter.data.service.TripParticipantsRepository;
 import it.trekkete.hikehunter.data.service.UserRepository;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.views.MainLayout;
+import it.trekkete.hikehunter.ui.views.general.HomeView;
 import it.trekkete.hikehunter.ui.views.logged.JoinView;
 import it.trekkete.hikehunter.utils.AppEvents;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.lucene.util.SloppyMath;
 import software.xdev.vaadin.maps.leaflet.flow.data.LCenter;
 
@@ -40,6 +43,8 @@ import java.util.Random;
 import java.util.UUID;
 
 public class TripCard extends ListItem implements PropertyChangeListener {
+
+    private final Logger log = LogManager.getLogger(TripCard.class);
 
     private final String[] randoms = new String[] {
             "https://images.unsplash.com/photo-1519681393784-d120267933ba?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=750&q=80",
@@ -66,7 +71,7 @@ public class TripCard extends ListItem implements PropertyChangeListener {
 
         MainLayout.getCurrentLayout().ifPresent(mainLayout -> {
             mainLayout.addChangeListener(this);
-            System.out.println("Registered trip '" + trip.getTitle() + "' to change listener");
+            log.trace("Registered {} to change listener", this.getClass().getSimpleName());
         });
 
         constructUI();
@@ -76,8 +81,10 @@ public class TripCard extends ListItem implements PropertyChangeListener {
     protected void onDetach(DetachEvent detachEvent) {
         super.onDetach(detachEvent);
 
-        MainLayout.getCurrentLayout().ifPresent(mainLayout -> mainLayout.removeChangeListener(this));
-        System.out.println("Unregistered trip '" + trip.getTitle() + "' to change listener");
+        MainLayout.getCurrentLayout().ifPresent(mainLayout -> {
+            mainLayout.removeChangeListener(this);
+            log.trace("Unregistered {} to change listener", this.getClass().getSimpleName());
+        });
     }
 
     public TripCard(Trip trip, AuthenticatedUser authenticatedUser, UserRepository userRepository, TripParticipantsRepository tripParticipantsRepository, TripLocationRepository tripLocationRepository, LocationRepository locationRepository) {
@@ -149,8 +156,12 @@ public class TripCard extends ListItem implements PropertyChangeListener {
         subtitle.add(getCreatorInfo(trip.getCreator(), userRepository));
 
         addClickListener(click -> {
-            VaadinSession.getCurrent().getSession().setAttribute("TRIP_ID_REROUTING", String.valueOf(trip.getId()));
-            System.out.println("Saving trip id in session: " + trip.getId());
+
+            if (authenticatedUser.get().isPresent())
+                return;
+
+            VaadinSession.getCurrent().getSession().setAttribute(AppEvents.REROUTING_TRIP, String.valueOf(trip.getId()));
+            log.trace("Saving '{}' in session: {}", AppEvents.REROUTING_TRIP, trip.getId());
 
             UI.getCurrent().navigate(JoinView.class, new RouteParameters("tripId", String.valueOf(trip.getId())));
         });
@@ -256,7 +267,7 @@ public class TripCard extends ListItem implements PropertyChangeListener {
 
             Location userLocation = (Location) propertyChangeEvent.getNewValue();
 
-            System.out.println("Received location update event in trip card '" + trip.getTitle() + "' for location: " + userLocation);
+            log.trace("Received location update event in trip card '{}' for location: {}", trip.getTitle(), userLocation);
 
             update(userLocation);
         }
@@ -275,6 +286,6 @@ public class TripCard extends ListItem implements PropertyChangeListener {
         double distance = SloppyMath.haversinMeters(userLocation.getLatitude(), userLocation.getLongitude(), first.getLatitude(), first.getLongitude());
         kms.setText(((int) distance/1000) + " km da te");
 
-        System.out.println("Data is fine for location update, distance: " + ((int) distance/1000) + " km da te");
+        log.trace("Data is fine for location update, distance: {} km da te", ((int) distance/1000));
     }
 }
