@@ -36,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import software.xdev.vaadin.maps.leaflet.flow.data.LCenter;
 
+import java.awt.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.List;
@@ -127,7 +128,7 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
 
             List<TripLocation> locations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
 
-            String color = String.format("%06x", new Random().nextInt(0xffffff + 1));
+            String color = Integer.toHexString(Color.getHSBColor(new Random().nextFloat(0.5f, 1.0f), 1.0f, 0.36f).getRGB()).substring(2);
 
             if (locations.size() > 1) {
                 map.addData(MapUtils.tripToGeoJson(locations.stream().map(tripLocation -> locationRepository.findLocationById(tripLocation.getLocation())).toList(), trip.getTitle(), trip.getId().toString(), color));

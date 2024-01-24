@@ -107,7 +107,7 @@ public class MapUtils {
 
         properties.put("style", style);
 
-        properties.put("radius", 40);
+        properties.put("radius", 60);
 
         geo.put("properties", properties);
 
@@ -140,7 +140,7 @@ public class MapUtils {
 
         JSONObject style = new JSONObject();
         style.put("color", "#" + color);
-        style.put("weight", "4");
+        style.put("weight", "7");
 
         properties.put("style", style);
 
