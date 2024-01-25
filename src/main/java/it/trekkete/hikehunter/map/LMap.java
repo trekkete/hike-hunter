@@ -1,7 +1,6 @@
 package it.trekkete.hikehunter.map;
 
 import it.trekkete.hikehunter.data.entity.Location;
-import it.trekkete.hikehunter.data.entity.TripLocation;
 import kong.unirest.json.JSONObject;
 import org.apache.commons.text.StringEscapeUtils;
 import software.xdev.vaadin.maps.leaflet.flow.data.LCenter;
@@ -9,7 +8,6 @@ import software.xdev.vaadin.maps.leaflet.flow.data.LPoint;
 import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class LMap extends software.xdev.vaadin.maps.leaflet.flow.LMap {
@@ -83,6 +81,8 @@ public class LMap extends software.xdev.vaadin.maps.leaflet.flow.LMap {
                 "if (e.properties && e.properties.style) layer.setStyle(e.properties.style);" +
                 "}" +
                 "});");
+
+        overpassLayer.query();
 
         this.getElement().executeJs("this.map.addLayer(" + CLIENT_OVERPASS_LAYER + ");");
     }

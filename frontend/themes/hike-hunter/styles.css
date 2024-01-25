@@ -1,7 +1,6 @@
 @import url('./main-layout.css');
 @import url('./views/esplora-view.css');
 @import url('./views/parti-view.css');
-@import url('line-awesome/dist/line-awesome/css/line-awesome.min.css');
 @import url('@fontsource/nunito');
 
 html {
@@ -139,6 +138,10 @@ html {
 
 .show-more-button {
     font-size: 0.6em;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  display: none;
 }
 
 @media {

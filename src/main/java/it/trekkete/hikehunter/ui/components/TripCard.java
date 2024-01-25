@@ -157,11 +157,10 @@ public class TripCard extends ListItem implements PropertyChangeListener {
 
         addClickListener(click -> {
 
-            if (authenticatedUser.get().isPresent())
-                return;
-
-            VaadinSession.getCurrent().getSession().setAttribute(AppEvents.REROUTING_TRIP, String.valueOf(trip.getId()));
-            log.trace("Saving '{}' in session: {}", AppEvents.REROUTING_TRIP, trip.getId());
+            if (authenticatedUser.get().isEmpty()) {
+                VaadinSession.getCurrent().getSession().setAttribute(AppEvents.REROUTING_TRIP, String.valueOf(trip.getId()));
+                log.trace("Saving '{}' in session: {}", AppEvents.REROUTING_TRIP, trip.getId());
+            }
 
             UI.getCurrent().navigate(JoinView.class, new RouteParameters("tripId", String.valueOf(trip.getId())));
         });

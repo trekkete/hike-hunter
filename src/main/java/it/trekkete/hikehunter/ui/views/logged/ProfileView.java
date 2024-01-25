@@ -28,7 +28,6 @@ import de.jfancy.StarsRating;
 import it.trekkete.hikehunter.data.entity.*;
 import it.trekkete.hikehunter.data.service.*;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
-import it.trekkete.hikehunter.ui.components.TripCard;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.utils.AppEvents;
 import it.trekkete.hikehunter.utils.FileUtils;
@@ -443,7 +442,6 @@ public class ProfileView extends VerticalLayout implements BeforeEnterObserver {
 
             // rimuovo il parametro in sessione
             session.removeAttribute(AppEvents.REROUTING_TRIP);
-            session.removeAttribute(AppEvents.REROUTING_NEW_TRIP);
             log.trace("Removed '{}' from session: {}", AppEvents.REROUTING_TRIP, tripId);
 
             beforeEnterEvent.rerouteTo(JoinView.class, new RouteParameters("tripId", tripId));
@@ -457,7 +455,6 @@ public class ProfileView extends VerticalLayout implements BeforeEnterObserver {
 
             // rimuovo il parametro in sessione
             session.removeAttribute(AppEvents.REROUTING_NEW_TRIP);
-            session.removeAttribute(AppEvents.REROUTING_TRIP);
             log.trace("Removed '{}' attribute from session", AppEvents.REROUTING_NEW_TRIP);
 
             beforeEnterEvent.rerouteTo(CreateTripView.class);

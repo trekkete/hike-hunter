@@ -107,10 +107,10 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
             });
         });
 
-        String query = new OverpassQueryBuilder()
-                .setQuery("(" + sb + ");(._; >;);")
-                .setOutput(OverpassQueryOptions.Output.QT)
-                .build();
+        String query = new OverpassQueryBuilder().setQuery("(" + sb + ");(._; >;);")
+                .setOutput(OverpassQueryOptions.Output.GEOM).build();
+
+        log.trace("Overpass query: {}", query);
 
         LOverpassLayer overpassLayer =
                 new LOverpassLayer("https://overpass-api.de/api/interpreter", query);
@@ -171,11 +171,10 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
 
         create.addClickListener(click -> {
 
-            if (authenticatedUser.get().isPresent())
-                return;
-
-            VaadinSession.getCurrent().getSession().setAttribute(AppEvents.REROUTING_NEW_TRIP, "true");
-            log.trace("Saving '{}' in session", AppEvents.REROUTING_NEW_TRIP);
+            if (authenticatedUser.get().isEmpty()) {
+                VaadinSession.getCurrent().getSession().setAttribute(AppEvents.REROUTING_NEW_TRIP, "true");
+                log.trace("Saving '{}' in session", AppEvents.REROUTING_NEW_TRIP);
+            }
 
             UI.getCurrent().navigate(CreateTripView.class);
         });

@@ -99,7 +99,7 @@ public class MapUtils {
         geo.put("geometry", source.get("geometry"));
 
         JSONObject properties = new JSONObject();
-        properties.put("name", "<div style=\"display: flex; flex-direction: column;\"><div style=\"font-weight: bold; display: flex;\"><span style=\"text-align: center;\">" + title + "</span></div><a href=\"/trip/" + dest + "\">Vedi l'escursione</a></div>");
+        properties.put("name", "<div style=\"display: flex; flex-direction: column;\"><div style=\"font-weight: bold; display: flex;\"><span style=\"text-align: center;\">" + title + "</span></div><a href=\"/trip/" + dest + "\" onclick=\"sessionStorage.setItem('" + AppEvents.REROUTING_TRIP + "', '" + dest + "')\">Vedi l'escursione</a></div>");
 
         JSONObject style = new JSONObject();
         style.put("color", "#" + color);

@@ -42,7 +42,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 @JsModule(value = "./js/geolocation.js")
@@ -70,16 +69,14 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
         }
     }
 
-    public static class MenuItemInfo extends RouterLink {
+    static class MenuItemInfo extends RouterLink {
 
         private final Logger log = LogManager.getLogger(MenuItemInfo.class);
 
         private final Class<? extends Component> view;
-        private final AuthenticatedUser authenticatedUser;
 
-        public MenuItemInfo(String viewName, Icon icon, Class<? extends Component> view, AuthenticatedUser authenticatedUser) {
+        public MenuItemInfo(String viewName, Icon icon, Class<? extends Component> view) {
             this.view = view;
-            this.authenticatedUser = authenticatedUser;
 
             addClassNames(LumoUtility.Display.FLEX,
                     LumoUtility.AlignItems.CENTER,
@@ -97,7 +94,6 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
         public MenuItemInfo(Avatar avatar, Class<? extends Component> view, AuthenticatedUser authenticatedUser) {
             this.view = view;
-            this.authenticatedUser = authenticatedUser;
 
             addClassNames(LumoUtility.Display.FLEX,
                     LumoUtility.AlignItems.CENTER,
@@ -112,18 +108,6 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
             getStyle().set("text-decoration", "none");
             if (avatar.getName() != null)
                 getElement().setAttribute("aria-label", avatar.getName());
-        }
-
-        @Override
-        public void afterNavigation(AfterNavigationEvent event) {
-
-            if (authenticatedUser.get().isPresent())
-                return;
-
-            if (view.getSimpleName().equals(CreateTripView.class.getSimpleName())) {
-                VaadinSession.getCurrent().getSession().setAttribute(AppEvents.REROUTING_NEW_TRIP, "true");
-                log.trace("Saving '{}' in session", AppEvents.REROUTING_NEW_TRIP);
-            }
         }
 
         public Class<?> getView() {
@@ -260,11 +244,22 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
     }
 
     private MenuItemInfo[] createMenuItems() {
+
+        MenuItemInfo createTrip = new MenuItemInfo("CREA", FontAwesome.Solid.LOCATION_ARROW.create(), CreateTripView.class);
+        createTrip.getElement().addEventListener("click", click -> {
+
+            if (authenticatedUser.get().isPresent())
+                return;
+
+            VaadinSession.getCurrent().getSession().setAttribute(AppEvents.REROUTING_NEW_TRIP, "true");
+            log.trace("Saving '{}' in session", AppEvents.REROUTING_NEW_TRIP);
+        });
+
         return new MenuItemInfo[]{ //
-                new MenuItemInfo("ESPLORA", FontAwesome.Solid.HOME.create(), HomeView.class, authenticatedUser), //
-                new MenuItemInfo("MAPPA", FontAwesome.Solid.MAP_LOCATION_DOT.create(), MapView.class, authenticatedUser), //
-                new MenuItemInfo("CERCA", FontAwesome.Solid.SEARCH.create(), SearchView.class, authenticatedUser), //
-                new MenuItemInfo("CREA", FontAwesome.Solid.LOCATION_ARROW.create(), CreateTripView.class, authenticatedUser), //
+                new MenuItemInfo("ESPLORA", FontAwesome.Solid.HOME.create(), HomeView.class), //
+                new MenuItemInfo("MAPPA", FontAwesome.Solid.MAP_LOCATION_DOT.create(), MapView.class), //
+                new MenuItemInfo("CERCA", FontAwesome.Solid.SEARCH.create(), SearchView.class), //
+                createTrip, //
                 //new MenuItemInfo("PROFILO", VaadinIcon.USER, ProfileView.class), //
         };
     }

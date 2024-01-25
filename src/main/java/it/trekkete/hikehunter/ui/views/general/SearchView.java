@@ -150,8 +150,8 @@ public class SearchView extends VerticalLayout {
                 TripCard tripCard = new TripCard(t, authenticatedUser,
                         userRepository, tripParticipantsRepository,
                         tripLocationRepository, locationRepository);
-                tripCard.setMaxWidth("100%");
                 imageContainer.add(tripCard);
+                tripCard.setMaxWidth("100% !important");
             }
 
             tripContainer.add(imageContainer);

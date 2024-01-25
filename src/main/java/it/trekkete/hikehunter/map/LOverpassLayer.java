@@ -20,23 +20,18 @@ public class LOverpassLayer {
     private String endpoint;
     private String query;
 
-    private Map<String, JSONElement> nodes;
-    private Map<String, JSONElement> ways;
+    private final Map<String, JSONElement> nodes;
+    private final Map<String, JSONElement> ways;
 
     public LOverpassLayer(String endpoint, String query) {
-
         this.endpoint = endpoint;
         this.query = query;
 
         nodes = new HashMap<>();
         ways = new HashMap<>();
-
-        JSONObject json = query(endpoint, query);
-
-        parseOverPassJSON(json);
     }
 
-    private JSONObject query(String endpoint, String query) {
+    public JSONObject query() {
 
         String data = "data=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
 
@@ -46,7 +41,11 @@ public class LOverpassLayer {
                 .asJson().getBody();
 
         if (body != null) {
-            return body.getObject();
+            JSONObject bodyObject = body.getObject();
+
+            parseOverPassJSON(bodyObject);
+
+            return bodyObject;
         }
 
         return null;
@@ -96,17 +95,21 @@ public class LOverpassLayer {
                             if (!element.has("nodes"))
                                 continue;
 
-                            JSONArray nodesList = element.getJSONArray("nodes");
+                            JSONArray coordinatesList = element.getJSONArray("geometry");
 
                             JSONArray coordinates = new JSONArray();
-                            nodesList.forEach(_id -> {
+                            coordinatesList.forEach(_element -> {
 
-                                if (!nodes.containsKey(String.valueOf(_id)))
+                                JSONObject _coordinate = (JSONObject) _element;
+
+                                if (!_coordinate.has("lat") || !_coordinate.has("lon"))
                                     return;
 
-                                JSONObject node = (JSONObject) nodes.get(String.valueOf(_id));
+                                JSONArray coordinate = new JSONArray();
+                                coordinate.put(_coordinate.getDouble("lon"));
+                                coordinate.put(_coordinate.getDouble("lat"));
 
-                                coordinates.put(node.getJSONArray("coordinates"));
+                                coordinates.put(coordinate);
                             });
 
                             element.put("coordinates", coordinates);
@@ -172,12 +175,12 @@ public class LOverpassLayer {
 
     public JSONElement get(String id) {
 
-        if (nodes.containsKey(id)) {
-            return nodes.get(id);
-        }
-
         if (ways.containsKey(id)) {
             return ways.get(id);
+        }
+
+        if (nodes.containsKey(id)) {
+            return nodes.get(id);
         }
 
         return null;
