@@ -144,6 +144,19 @@ html {
   display: none;
 }
 
+#loginForm vaadin-login-form-wrapper::part(form-title) {
+  display: none;
+}
+
+#loginForm vaadin-login-form-wrapper::part(form) {
+  padding-left: 0;
+  padding-right: 0
+}
+
+#loginForm vaadin-login-form-wrapper::part(footer) {
+  display: none;
+}
+
 @media {
 ::-webkit-scrollbar {
   display: none;

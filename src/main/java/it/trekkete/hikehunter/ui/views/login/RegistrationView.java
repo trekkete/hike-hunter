@@ -1,19 +1,27 @@
 package it.trekkete.hikehunter.ui.views.login;
 
 import com.google.gson.Gson;
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.PasswordField;
+import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 import it.trekkete.hikehunter.data.Role;
+import it.trekkete.hikehunter.data.entity.EmailVerificationToken;
 import it.trekkete.hikehunter.data.entity.User;
 import it.trekkete.hikehunter.data.entity.UserExtendedData;
+import it.trekkete.hikehunter.data.service.EmailVerificationTokenRepository;
+import it.trekkete.hikehunter.data.service.EmailVerificationTokenService;
 import it.trekkete.hikehunter.data.service.UserRepository;
-import it.trekkete.hikehunter.ui.components.RegistrationForm;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
@@ -25,93 +33,271 @@ import java.util.Set;
 @AnonymousAllowed
 public class RegistrationView extends VerticalLayout {
 
-    public RegistrationView(@Autowired UserRepository userRepository) {
-        RegistrationForm registrationForm = new RegistrationForm();
-        // Center the RegistrationForm
-        setHorizontalComponentAlignment(Alignment.CENTER, registrationForm);
+    private final UserRepository userRepository;
+    private final EmailVerificationTokenService emailVerificationTokenService;
 
-        //getElement().setAttribute("theme", "hike-hunter");
+    private final VerticalLayout container;
 
-        Div header = new Div();
+    public RegistrationView(@Autowired UserRepository userRepository,
+                            @Autowired EmailVerificationTokenRepository emailVerificationTokenRepository) {
+        this.userRepository = userRepository;
+        this.emailVerificationTokenService = new EmailVerificationTokenService(emailVerificationTokenRepository);
 
-        H1 title = new H1("hike-hunter");
-        title.getStyle().set("color", "white");
-        header.add(title);
-        header.setSizeFull();
-        header.getStyle()
-                .set("background-color", "var(--lumo-primary-color)")
-                .set("padding", "var(--lumo-space-l) var(--lumo-space-xl) var(--lumo-space-l) var(--lumo-space-l)")
-                .set("box-sizing", "border-box")
-                .set("overflow", "hidden")
-                .set("border-radius", "var(--lumo-border-radius-l) var(--lumo-border-radius-l) 0 0")
-                .set("display", "flex")
-                .set("flex-direction", "column")
-                .set("justify-content", "flex-end");
+        this.container = new VerticalLayout();
+        this.container.setSpacing(false);
+        this.container.addClassNames(LumoUtility.AlignItems.CENTER);
+    }
 
-        Div content = new Div();
-        content.getStyle()
-                .set("padding", "var(--lumo-space-l) var(--lumo-space-xl) var(--lumo-space-l) var(--lumo-space-l)");
-        content.add(registrationForm);
+    private void constructUI() {
 
-        VerticalLayout container = new VerticalLayout(header, content);
-        container.setSpacing(false);
-        container.setPadding(false);
-        container.setMaxWidth("calc(var(--lumo-size-m) * 20)");
-        container.getStyle()
-                .set("box-shadow", "var(--lumo-box-shadow-s)")
-                .set("margin", "var(--lumo-space-s)")
-                .set("border-radius", "var(--lumo-border-radius-l)");
+        setSpacing(false);
+        addClassNames(LumoUtility.AlignItems.CENTER);
 
-        setAlignItems(Alignment.CENTER);
-        setSizeFull();
-        setJustifyContentMode(JustifyContentMode.CENTER);
-        setPadding(false);
+        Image logo = new Image("images/default-logo.png", "hike-hunter-logo");
+        logo.setWidth("100%");
+        logo.setMaxWidth("400px");
+        logo.getStyle()
+                .set("object-fit", "contain");
+
+        add(logo);
+
+        setStageOne(new User());
 
         add(container);
+    }
 
-        registrationForm.getSubmitButton().addClickListener(click -> {
+    private void setStageOne(User user) {
 
-            String pass1 = registrationForm.getPasswordField().getValue();
-            String pass2 = registrationForm.getPasswordConfirmField().getValue();
+        container.removeAll();
 
-            if (userRepository.findByUsername(registrationForm.getEmail().getValue()) != null) {
-                registrationForm.getEmail().setInvalid(true);
-                registrationForm.getEmail().setErrorMessage("Esiste già un account associato a questa mail");
-            }
+        FormLayout stageOneLayout = new FormLayout();
+        stageOneLayout.setWidthFull();
+        stageOneLayout.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
 
-            if (pass1.length() < 8) {
-                registrationForm.getPasswordField().setInvalid(true);
-                registrationForm.getPasswordField().setErrorMessage("Deve contenere almeno 8 caratteri");
+        UserExtendedData userExtendedData;
+        if (user.getExtendedData() != null)
+            userExtendedData = new Gson().fromJson(user.getExtendedData(), UserExtendedData.class);
+        else
+            userExtendedData = new UserExtendedData();
+
+        TextField firstName = new TextField("Nome");
+        if (userExtendedData.getName() != null)
+            firstName.setValue(userExtendedData.getName());
+
+        TextField lastName = new TextField("Cognome");
+        if (userExtendedData.getSurname() != null)
+            lastName.setValue(userExtendedData.getSurname());
+
+        TextField username = new TextField("Username");
+        if (user.getUsername() != null)
+            username.setValue(user.getUsername());
+
+        stageOneLayout.add(firstName, lastName, username);
+
+        Button next = new Button("Avanti");
+        next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        next.getStyle().set("margin-top", "1.5em");
+        next.addClickListener(click -> {
+
+            if (username.getValue() == null || username.isEmpty()) {
+                username.setInvalid(true);
+                username.setErrorMessage("Lo username non può essere vuoto");
 
                 return;
             }
 
-            if (!pass1.equals(pass2)) {
-                registrationForm.getPasswordConfirmField().setInvalid(true);
-                registrationForm.getPasswordConfirmField().setErrorMessage("Le password non sono uguali");
+            if (userRepository.findByUsername(username.getValue()) != null) {
+                username.setInvalid(true);
+                username.setErrorMessage("Esiste già un account associato a questo username");
 
                 return;
             }
 
-            User user = new User();
+            if(firstName.getValue() != null && !firstName.isEmpty()) {
+                userExtendedData.setName(firstName.getValue());
+            }
 
-            UserExtendedData extendedData = new UserExtendedData();
-            extendedData.setEmail(registrationForm.getEmail().getValue());
-            extendedData.setName(registrationForm.getFirstName().getValue());
-            extendedData.setSurname(registrationForm.getLastName().getValue());
-            extendedData.setPhoneNumber(registrationForm.getPhoneNumber().getValue());
+            if(lastName.getValue() != null && !lastName.isEmpty()) {
+                userExtendedData.setSurname(lastName.getValue());
+            }
 
-            user.setUsername(registrationForm.getEmail().getValue());
+            user.setUsername(username.getValue());
+            user.setExtendedData(new Gson().toJson(userExtendedData));
+
+            setStageTwo(user);
+        });
+
+        stageOneLayout.add(next);
+
+        container.add(stageOneLayout);
+    }
+
+    private void setStageTwo(User user) {
+
+        container.removeAll();
+
+        FormLayout stageTwoLayout = new FormLayout();
+        stageTwoLayout.setWidthFull();
+        stageTwoLayout.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
+
+        UserExtendedData userExtendedData;
+        if (user.getExtendedData() != null)
+            userExtendedData = new Gson().fromJson(user.getExtendedData(), UserExtendedData.class);
+        else
+            userExtendedData = new UserExtendedData();
+
+        TextField email = new TextField("Email");
+        if (userExtendedData.getEmail() != null)
+            email.setValue(userExtendedData.getEmail());
+
+        TextField phoneNumber = new TextField("Numero di telefono");
+        if (userExtendedData.getPhoneNumber() != null)
+            phoneNumber.setValue(userExtendedData.getPhoneNumber());
+
+        stageTwoLayout.add(email, phoneNumber);
+
+        Button back = new Button("Indietro");
+        back.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        back.getStyle().set("margin-top", "1.5em");
+        back.addClickListener(click -> setStageOne(user));
+
+        Button next = new Button("Avanti");
+        next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        next.addClickListener(click -> {
+
+            if(email.getValue() != null && !email.isEmpty()) {
+                userExtendedData.setEmail(email.getValue());
+            }
+
+            if(phoneNumber.getValue() != null && !phoneNumber.isEmpty()) {
+                userExtendedData.setPhoneNumber(phoneNumber.getValue());
+            }
+
+            user.setExtendedData(new Gson().toJson(userExtendedData));
+
+            EmailVerificationToken emailVerificationToken = new EmailVerificationToken();
+            emailVerificationToken.setEmail(userExtendedData.getEmail());
+            emailVerificationToken.setToken(RandomStringUtils.random(6, false, true));
+            emailVerificationToken.setCreationTs(ZonedDateTime.now().toEpochSecond());
+
+            emailVerificationTokenService.save(emailVerificationToken);
+
+            //TODO invia la mail con il token per la verifica
+
+            setStageThree(user);
+        });
+
+        stageTwoLayout.add(back, next);
+
+        container.add(stageTwoLayout);
+    }
+
+    private void setStageThree(User user) {
+
+        container.removeAll();
+
+        FormLayout stageThreeLayout = new FormLayout();
+        stageThreeLayout.setWidthFull();
+        stageThreeLayout.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
+
+        TextField code = new TextField("Codice");
+
+        UserExtendedData userExtendedData = new Gson().fromJson(user.getExtendedData(), UserExtendedData.class);
+
+        stageThreeLayout.add(code);
+
+        Button back = new Button("Indietro");
+        back.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        back.getStyle().set("margin-top", "1.5em");
+        back.addClickListener(click -> setStageTwo(user));
+
+        Button next = new Button("Avanti");
+        next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        next.addClickListener(click -> {
+
+            emailVerificationTokenService.deleteOldTokens();
+
+            EmailVerificationToken evt = emailVerificationTokenService.findByEmail(userExtendedData.getEmail());
+            if (evt == null) {
+                code.setInvalid(true);
+                code.setErrorMessage("Non esiste un codice di validazione per la mail impostata. Riprovare più tardi.");
+
+                return;
+            }
+
+            if (!evt.getToken().equals(code.getValue())) {
+                code.setInvalid(true);
+                code.setErrorMessage("Il codice non corrisponde a quello inviato.");
+
+                return;
+            }
+
+            setStageFour(user);
+        });
+
+        stageThreeLayout.add(back, next);
+
+        container.add(stageThreeLayout);
+    }
+
+    private void setStageFour(User user) {
+
+        container.removeAll();
+
+        FormLayout stageFourLayout = new FormLayout();
+        stageFourLayout.setWidthFull();
+        stageFourLayout.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
+
+        PasswordField password = new PasswordField("Password");
+        PasswordField confirm = new PasswordField("Ripeti password");
+
+        stageFourLayout.add(password, confirm);
+
+        Button back = new Button("Indietro");
+        back.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        back.getStyle().set("margin-top", "1.5em");
+        back.addClickListener(click -> setStageTwo(user));
+
+        Button next = new Button("Inizia l'avventura");
+        next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        next.addClickListener(click -> {
+
+            if(password.getValue() == null || password.getValue().length() < 8) {
+                password.setInvalid(true);
+                password.setErrorMessage("La password deve essere di almeno 8 caratteri");
+
+                return;
+            }
+
+            if(confirm.getValue() == null || !confirm.getValue().equals(password.getValue())) {
+                confirm.setInvalid(true);
+                confirm.setErrorMessage("Le password non corrispondono");
+
+                return;
+            }
+
             user.setRoles(Set.of(Role.USER));
-            user.setHashedPassword(new BCryptPasswordEncoder().encode(registrationForm.getPasswordField().getValue()));
+            user.setHashedPassword(new BCryptPasswordEncoder().encode(password.getValue()));
             user.setCreationTs(ZonedDateTime.now().toEpochSecond());
-            user.setExtendedData(new Gson().toJson(extendedData));
 
             userRepository.save(user);
 
-            Notification.show("Benvenuto su Hike Hunter", 3, Notification.Position.BOTTOM_END);
-
             UI.getCurrent().navigate(LoginView.class);
         });
+
+        stageFourLayout.add(back, next);
+
+        container.add(stageFourLayout);
+    }
+
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
+
+        constructUI();
     }
 }
