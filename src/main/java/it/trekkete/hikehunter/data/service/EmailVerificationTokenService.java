@@ -23,6 +23,10 @@ public class EmailVerificationTokenService {
         return this.emailVerificationTokenRepository.findByEmail(email);
     }
 
+    public void delete(EmailVerificationToken emailVerificationToken) {
+        this.emailVerificationTokenRepository.delete(emailVerificationToken);
+    }
+
     public void deleteOldTokens() {
 
         long now = ZonedDateTime.now().toEpochSecond();

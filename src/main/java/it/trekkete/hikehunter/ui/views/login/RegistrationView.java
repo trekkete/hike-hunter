@@ -1,15 +1,27 @@
 package it.trekkete.hikehunter.ui.views.login;
 
+import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
 import com.google.gson.Gson;
 import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.cookieconsent.CookieConsent;
 import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.textfield.TextFieldVariant;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
@@ -21,10 +33,16 @@ import it.trekkete.hikehunter.data.entity.UserExtendedData;
 import it.trekkete.hikehunter.data.service.EmailVerificationTokenRepository;
 import it.trekkete.hikehunter.data.service.EmailVerificationTokenService;
 import it.trekkete.hikehunter.data.service.UserRepository;
+import it.trekkete.hikehunter.email.EmailService;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import javax.mail.MessagingException;
 import java.time.ZonedDateTime;
 import java.util.Set;
 
@@ -33,10 +51,15 @@ import java.util.Set;
 @AnonymousAllowed
 public class RegistrationView extends VerticalLayout {
 
+    private final Logger log = LogManager.getLogger(RegistrationView.class);
+
     private final UserRepository userRepository;
     private final EmailVerificationTokenService emailVerificationTokenService;
 
     private final VerticalLayout container;
+
+    @Autowired
+    EmailService emailService;
 
     public RegistrationView(@Autowired UserRepository userRepository,
                             @Autowired EmailVerificationTokenRepository emailVerificationTokenRepository) {
@@ -185,6 +208,29 @@ public class RegistrationView extends VerticalLayout {
             emailVerificationTokenService.save(emailVerificationToken);
 
             //TODO invia la mail con il token per la verifica
+            try {
+                emailService.sendMessage(userExtendedData.getEmail(), "Verifica la tua mail", emailVerificationToken.getToken());
+            } catch (MessagingException e) {
+                log.warn("Error sending mail verification token to {}", userExtendedData.getEmail());
+
+                Notification notification = new Notification();
+                notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
+
+                Icon icon = FontAwesome.Solid.WARNING.create();
+                Div info = new Div(new Text("C'è stato un errore nell'invio dell'e-mail di verifica. Riprova più tardi."));
+
+                HorizontalLayout layout = new HorizontalLayout(icon, info);
+                layout.setAlignItems(FlexComponent.Alignment.CENTER);
+
+                notification.add(layout);
+                notification.setPosition(Notification.Position.TOP_CENTER);
+                notification.setDuration(0);
+                layout.addClickListener(click1 -> notification.close());
+
+                notification.open();
+
+                return;
+            }
 
             setStageThree(user);
         });
@@ -203,9 +249,13 @@ public class RegistrationView extends VerticalLayout {
         stageThreeLayout.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
                 new FormLayout.ResponsiveStep("600px", 2));
 
-        TextField code = new TextField("Codice");
-
         UserExtendedData userExtendedData = new Gson().fromJson(user.getExtendedData(), UserExtendedData.class);
+
+        TextField code = new TextField("Codice");
+        code.setMinLength(6);
+        code.setMaxLength(6);
+        code.setHelperText("Abbiamo inviato un codice a " + userExtendedData.getEmail() + ". Inseriscilo per verificare la tua mail.");
+        code.addThemeVariants(TextFieldVariant.LUMO_HELPER_ABOVE_FIELD, TextFieldVariant.LUMO_ALIGN_CENTER);
 
         stageThreeLayout.add(code);
 
@@ -234,6 +284,8 @@ public class RegistrationView extends VerticalLayout {
 
                 return;
             }
+
+            emailVerificationTokenService.delete(evt);
 
             setStageFour(user);
         });
