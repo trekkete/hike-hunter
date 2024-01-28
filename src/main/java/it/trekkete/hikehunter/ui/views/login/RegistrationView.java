@@ -7,21 +7,19 @@ import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.cookieconsent.CookieConsent;
+import com.vaadin.flow.component.contextmenu.ContextMenu;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.textfield.NumberField;
-import com.vaadin.flow.component.textfield.PasswordField;
-import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.component.textfield.TextFieldVariant;
+import com.vaadin.flow.component.textfield.*;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
@@ -34,12 +32,12 @@ import it.trekkete.hikehunter.data.service.EmailVerificationTokenRepository;
 import it.trekkete.hikehunter.data.service.EmailVerificationTokenService;
 import it.trekkete.hikehunter.data.service.UserRepository;
 import it.trekkete.hikehunter.email.EmailService;
+import it.trekkete.hikehunter.ui.window.ContactInfoWindow;
+import it.trekkete.hikehunter.ui.window.PasswordInfoWindow;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import javax.mail.MessagingException;
@@ -67,6 +65,7 @@ public class RegistrationView extends VerticalLayout {
         this.emailVerificationTokenService = new EmailVerificationTokenService(emailVerificationTokenRepository);
 
         this.container = new VerticalLayout();
+        this.container.setSizeFull();
         this.container.setSpacing(false);
         this.container.addClassNames(LumoUtility.AlignItems.CENTER);
     }
@@ -74,6 +73,7 @@ public class RegistrationView extends VerticalLayout {
     private void constructUI() {
 
         setSpacing(false);
+        setSizeFull();
         addClassNames(LumoUtility.AlignItems.CENTER);
 
         Image logo = new Image("images/default-logo.png", "hike-hunter-logo");
@@ -92,6 +92,11 @@ public class RegistrationView extends VerticalLayout {
     private void setStageOne(User user) {
 
         container.removeAll();
+
+        H4 stageTitle = new H4("Informarmazioni del profilo");
+        stageTitle.addClassNames(LumoUtility.Margin.NONE);
+
+        container.add(stageTitle);
 
         FormLayout stageOneLayout = new FormLayout();
         stageOneLayout.setWidthFull();
@@ -113,10 +118,11 @@ public class RegistrationView extends VerticalLayout {
             lastName.setValue(userExtendedData.getSurname());
 
         TextField username = new TextField("Username");
+        username.setRequired(true);
         if (user.getUsername() != null)
             username.setValue(user.getUsername());
 
-        stageOneLayout.add(firstName, lastName, username);
+        stageOneLayout.add(username, firstName, lastName);
 
         Button next = new Button("Avanti");
         next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
@@ -138,27 +144,41 @@ public class RegistrationView extends VerticalLayout {
             }
 
             if(firstName.getValue() != null && !firstName.isEmpty()) {
-                userExtendedData.setName(firstName.getValue());
+                userExtendedData.setName(firstName.getValue().trim());
             }
 
             if(lastName.getValue() != null && !lastName.isEmpty()) {
-                userExtendedData.setSurname(lastName.getValue());
+                userExtendedData.setSurname(lastName.getValue().trim());
             }
 
-            user.setUsername(username.getValue());
+            user.setUsername(username.getValue().trim());
             user.setExtendedData(new Gson().toJson(userExtendedData));
 
             setStageTwo(user);
         });
 
-        stageOneLayout.add(next);
-
         container.add(stageOneLayout);
+
+        container.addAndExpand(new Span());
+
+        FormLayout stageOneButtons = new FormLayout();
+        stageOneButtons.setWidthFull();
+        stageOneButtons.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
+
+        stageOneButtons.add(next);
+
+        container.add(stageOneButtons);
     }
 
     private void setStageTwo(User user) {
 
         container.removeAll();
+
+        H4 stageTitle = new H4("Informarmazioni di contatto");
+        stageTitle.addClassNames(LumoUtility.Margin.NONE);
+
+        container.add(stageTitle);
 
         FormLayout stageTwoLayout = new FormLayout();
         stageTwoLayout.setWidthFull();
@@ -171,7 +191,19 @@ public class RegistrationView extends VerticalLayout {
         else
             userExtendedData = new UserExtendedData();
 
-        TextField email = new TextField("Email");
+        EmailField email = new EmailField("Email");
+        email.setRequiredIndicatorVisible(true);
+
+        Button more = new Button(FontAwesome.Solid.QUESTION_CIRCLE.create());
+        more.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        more.addClassNames(LumoUtility.Margin.NONE, LumoUtility.Padding.NONE);
+
+        ContextMenu infoDialog = new ContextMenu(more);
+        infoDialog.setOpenOnClick(true);
+        infoDialog.add(new ContactInfoWindow());
+
+        email.setSuffixComponent(more);
+
         if (userExtendedData.getEmail() != null)
             email.setValue(userExtendedData.getEmail());
 
@@ -191,11 +223,11 @@ public class RegistrationView extends VerticalLayout {
         next.addClickListener(click -> {
 
             if(email.getValue() != null && !email.isEmpty()) {
-                userExtendedData.setEmail(email.getValue());
+                userExtendedData.setEmail(email.getValue().trim());
             }
 
             if(phoneNumber.getValue() != null && !phoneNumber.isEmpty()) {
-                userExtendedData.setPhoneNumber(phoneNumber.getValue());
+                userExtendedData.setPhoneNumber(phoneNumber.getValue().trim());
             }
 
             user.setExtendedData(new Gson().toJson(userExtendedData));
@@ -235,14 +267,28 @@ public class RegistrationView extends VerticalLayout {
             setStageThree(user);
         });
 
-        stageTwoLayout.add(back, next);
-
         container.add(stageTwoLayout);
+
+        container.addAndExpand(new Span());
+
+        FormLayout stageTwoButtons = new FormLayout();
+        stageTwoButtons.setWidthFull();
+        stageTwoButtons.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
+
+        stageTwoButtons.add(back, next);
+
+        container.add(stageTwoButtons);
     }
 
     private void setStageThree(User user) {
 
         container.removeAll();
+
+        H4 stageTitle = new H4("Codice di verifica");
+        stageTitle.addClassNames(LumoUtility.Margin.NONE);
+
+        container.add(stageTitle);
 
         FormLayout stageThreeLayout = new FormLayout();
         stageThreeLayout.setWidthFull();
@@ -290,14 +336,28 @@ public class RegistrationView extends VerticalLayout {
             setStageFour(user);
         });
 
-        stageThreeLayout.add(back, next);
-
         container.add(stageThreeLayout);
+
+        container.addAndExpand(new Span());
+
+        FormLayout stageThreeButtons = new FormLayout();
+        stageThreeButtons.setWidthFull();
+        stageThreeButtons.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
+
+        stageThreeButtons.add(back, next);
+
+        container.add(stageThreeButtons);
     }
 
     private void setStageFour(User user) {
 
         container.removeAll();
+
+        H4 stageTitle = new H4("Quasi finito, imposta la password");
+        stageTitle.addClassNames(LumoUtility.Margin.NONE);
+
+        container.add(stageTitle);
 
         FormLayout stageFourLayout = new FormLayout();
         stageFourLayout.setWidthFull();
@@ -305,7 +365,20 @@ public class RegistrationView extends VerticalLayout {
                 new FormLayout.ResponsiveStep("600px", 2));
 
         PasswordField password = new PasswordField("Password");
+        password.setRequired(true);
+        password.setPattern("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$");
         PasswordField confirm = new PasswordField("Ripeti password");
+        confirm.setRequired(true);
+
+        Button more = new Button(FontAwesome.Solid.QUESTION_CIRCLE.create());
+        more.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        more.addClassNames(LumoUtility.Margin.NONE, LumoUtility.Padding.NONE);
+
+        ContextMenu infoDialog = new ContextMenu(more);
+        infoDialog.setOpenOnClick(true);
+        infoDialog.addItem(new PasswordInfoWindow());
+
+        password.setSuffixComponent(more);
 
         stageFourLayout.add(password, confirm);
 
@@ -318,9 +391,9 @@ public class RegistrationView extends VerticalLayout {
         next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         next.addClickListener(click -> {
 
-            if(password.getValue() == null || password.getValue().length() < 8) {
-                password.setInvalid(true);
-                password.setErrorMessage("La password deve essere di almeno 8 caratteri");
+            if (password.isInvalid()) {
+                password.setErrorMessage("La password inserita non rispetta i vincoli");
+                more.click();
 
                 return;
             }
@@ -341,9 +414,18 @@ public class RegistrationView extends VerticalLayout {
             UI.getCurrent().navigate(LoginView.class);
         });
 
-        stageFourLayout.add(back, next);
-
         container.add(stageFourLayout);
+
+        container.addAndExpand(new Span());
+
+        FormLayout stageFourButtons = new FormLayout();
+        stageFourButtons.setWidthFull();
+        stageFourButtons.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
+
+        stageFourButtons.add(back, next);
+
+        container.add(stageFourButtons);
     }
 
     @Override
