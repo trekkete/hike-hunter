@@ -6,6 +6,7 @@ import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.contextmenu.ContextMenu;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
@@ -27,6 +28,7 @@ import it.trekkete.hikehunter.overpass.OverpassQueryOptions;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
+import it.trekkete.hikehunter.ui.window.ContactInfoWindow;
 import it.trekkete.hikehunter.ui.window.LayersToggleWindow;
 import it.trekkete.hikehunter.utils.AppEvents;
 import it.trekkete.hikehunter.utils.MapUtils;
@@ -154,10 +156,11 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
                 .set("background-color", "white")
                 .set("top", "8px")
                 .set("right", "10px")
-                .set("z-index", "99");;
-        toggle.addClickListener(click -> {
-            new LayersToggleWindow(map).open();
-        });
+                .set("z-index", "99");
+
+        ContextMenu infoDialog = new ContextMenu(toggle);
+        infoDialog.setOpenOnClick(true);
+        infoDialog.add(new LayersToggleWindow(map));
 
         Icon plus = FontAwesome.Solid.PLUS.create();
         plus.addClassNames(LumoUtility.IconSize.LARGE);

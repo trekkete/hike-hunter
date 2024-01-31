@@ -3,6 +3,7 @@ package it.trekkete.hikehunter.ui.window;
 import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
@@ -12,15 +13,13 @@ import com.vaadin.flow.theme.lumo.LumoUtility;
 import it.trekkete.hikehunter.map.LMap;
 import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
 
-public class LayersToggleWindow extends Dialog {
+public class LayersToggleWindow extends VerticalLayout {
 
     private final LMap map;
 
     public LayersToggleWindow(LMap map) {
         super();
         this.map = map;
-
-        setHeaderTitle("Dettagli mappa");
 
         HorizontalLayout container = new HorizontalLayout(
                 buildLayerComponent("Sentieri", LMap.Layers.WAYMARKEDTRAILS_HIKING, FontAwesome.Solid.HIKING.create()),
@@ -32,8 +31,6 @@ public class LayersToggleWindow extends Dialog {
         container.setJustifyContentMode(FlexComponent.JustifyContentMode.AROUND);
 
         add(container);
-
-        setCloseOnOutsideClick(true);
     }
 
     private VerticalLayout buildLayerComponent(String label, LTileLayer layer, Icon icon) {
