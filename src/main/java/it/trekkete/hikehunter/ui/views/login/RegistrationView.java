@@ -22,6 +22,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.*;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.WrappedSession;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import it.trekkete.hikehunter.data.Role;
@@ -34,6 +35,7 @@ import it.trekkete.hikehunter.data.service.UserRepository;
 import it.trekkete.hikehunter.email.EmailService;
 import it.trekkete.hikehunter.ui.window.ContactInfoWindow;
 import it.trekkete.hikehunter.ui.window.PasswordInfoWindow;
+import it.trekkete.hikehunter.utils.AppEvents;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -57,7 +59,7 @@ public class RegistrationView extends VerticalLayout {
     private final VerticalLayout container;
 
     @Autowired
-    EmailService emailService;
+    private EmailService emailService;
 
     public RegistrationView(@Autowired UserRepository userRepository,
                             @Autowired EmailVerificationTokenRepository emailVerificationTokenRepository) {
@@ -84,7 +86,24 @@ public class RegistrationView extends VerticalLayout {
 
         add(logo);
 
-        setStageOne(new User());
+        WrappedSession session = UI.getCurrent().getSession().getSession();
+        if (session != null
+            && session.getAttribute(AppEvents.REGISTER_USER_STAGE) != null
+            && session.getAttribute(AppEvents.REGISTER_USER_OBJ) != null) {
+
+            User user = (User) session.getAttribute(AppEvents.REGISTER_USER_OBJ);
+            Integer stage = (Integer) session.getAttribute(AppEvents.REGISTER_USER_STAGE);
+
+            switch (stage) {
+                case 2 -> setStageTwo(user);
+                case 3 -> setStageThree(user);
+                case 4 -> setStageFour(user);
+                default -> setStageOne(user);
+            }
+        }
+        else {
+            setStageOne(new User());
+        }
 
         add(container);
     }
@@ -119,6 +138,7 @@ public class RegistrationView extends VerticalLayout {
 
         TextField username = new TextField("Username");
         username.setRequired(true);
+        username.setPattern("^[A-Za-z][A-Za-z0-9_.]{4,29}$");
         if (user.getUsername() != null)
             username.setValue(user.getUsername());
 
@@ -128,6 +148,12 @@ public class RegistrationView extends VerticalLayout {
         next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         next.getStyle().set("margin-top", "1.5em");
         next.addClickListener(click -> {
+
+            if (username.isInvalid()) {
+                username.setErrorMessage("Lo username non è valido");
+
+                return;
+            }
 
             if (username.getValue() == null || username.isEmpty()) {
                 username.setInvalid(true);
@@ -153,6 +179,9 @@ public class RegistrationView extends VerticalLayout {
 
             user.setUsername(username.getValue().trim());
             user.setExtendedData(new Gson().toJson(userExtendedData));
+
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.REGISTER_USER_OBJ, user);
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.REGISTER_USER_STAGE, 2);
 
             setStageTwo(user);
         });
@@ -208,6 +237,8 @@ public class RegistrationView extends VerticalLayout {
             email.setValue(userExtendedData.getEmail());
 
         TextField phoneNumber = new TextField("Numero di telefono");
+        phoneNumber.setPattern("^([\\+][0-9]{1,3})?[0-9]{10}$");
+        phoneNumber.setHelperText("Formato: +39XXXXXXXXXX");
         if (userExtendedData.getPhoneNumber() != null)
             phoneNumber.setValue(userExtendedData.getPhoneNumber());
 
@@ -221,6 +252,18 @@ public class RegistrationView extends VerticalLayout {
         Button next = new Button("Avanti");
         next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         next.addClickListener(click -> {
+
+            if (email.isInvalid()) {
+                email.setErrorMessage("La mail inserita non è valida");
+
+                return;
+            }
+
+            if (phoneNumber.isInvalid()) {
+                phoneNumber.setErrorMessage("Il numero di telefono inserito non è valido");
+
+                return;
+            }
 
             if(email.getValue() != null && !email.isEmpty()) {
                 userExtendedData.setEmail(email.getValue().trim());
@@ -239,7 +282,6 @@ public class RegistrationView extends VerticalLayout {
 
             emailVerificationTokenService.save(emailVerificationToken);
 
-            //TODO invia la mail con il token per la verifica
             try {
                 emailService.sendMessage(userExtendedData.getEmail(), "Verifica la tua mail", emailVerificationToken.getToken());
             } catch (MessagingException e) {
@@ -263,6 +305,9 @@ public class RegistrationView extends VerticalLayout {
 
                 return;
             }
+
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.REGISTER_USER_OBJ, user);
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.REGISTER_USER_STAGE, 3);
 
             setStageThree(user);
         });
@@ -332,6 +377,9 @@ public class RegistrationView extends VerticalLayout {
             }
 
             emailVerificationTokenService.delete(evt);
+
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.REGISTER_USER_OBJ, user);
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.REGISTER_USER_STAGE, 4);
 
             setStageFour(user);
         });
@@ -410,6 +458,9 @@ public class RegistrationView extends VerticalLayout {
             user.setCreationTs(ZonedDateTime.now().toEpochSecond());
 
             userRepository.save(user);
+
+            UI.getCurrent().getSession().getSession().removeAttribute(AppEvents.REGISTER_USER_OBJ);
+            UI.getCurrent().getSession().getSession().removeAttribute(AppEvents.REGISTER_USER_STAGE);
 
             UI.getCurrent().navigate(LoginView.class);
         });
