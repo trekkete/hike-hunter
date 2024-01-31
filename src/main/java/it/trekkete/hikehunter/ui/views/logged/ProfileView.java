@@ -432,7 +432,7 @@ public class ProfileView extends VerticalLayout implements BeforeEnterObserver {
     @Override
     public void beforeEnter(BeforeEnterEvent beforeEnterEvent) {
 
-        WrappedSession session = VaadinSession.getCurrent().getSession();
+        /*WrappedSession session = VaadinSession.getCurrent().getSession();
 
         // controllo se sto provando ad andare nella pagina di un escursione
         String tripId = (String) session.getAttribute(AppEvents.REROUTING_TRIP);
@@ -459,6 +459,6 @@ public class ProfileView extends VerticalLayout implements BeforeEnterObserver {
 
             beforeEnterEvent.rerouteTo(CreateTripView.class);
             return;
-        }
+        }*/
     }
 }

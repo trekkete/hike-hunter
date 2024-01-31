@@ -112,27 +112,29 @@ public class HomeView extends VerticalLayout implements PropertyChangeListener {
 
             int count = allByUser.size();
 
-            int avg = 0;
-            for (Trip trip : allByUser) {
-                avg += trip.getRating();
-            }
-            avg /= count;
+            if (count > 0) {
 
-            int userScore = (((100 * count) / (1 + count)) + (avg / 5 * 100)) / 2;
+                int avg = 0;
+                for (Trip trip : allByUser) {
+                    avg += trip.getRating();
+                }
+                avg /= count;
 
-            for (Trip trip : trips) {
+                int userScore = (((100 * count) / (1 + count)) + (avg / 5 * 100)) / 2;
 
-                List<TripLocation> locations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
+                for (Trip trip : trips) {
 
-                int locationsCount = locations.size();
+                    List<TripLocation> locations = tripLocationRepository.findAllByTripOrderByIndex(trip.getId());
 
-                int tripScore = (((100 * locationsCount) / (1 + locationsCount)) + (trip.getRating() / 5 * 100)) / 2;
+                    int locationsCount = locations.size();
 
-                if (tripScore > userScore && tripScore < userScore + 30) {
-                    challenge.add(trip);
+                    int tripScore = (((100 * locationsCount) / (1 + locationsCount)) + (trip.getRating() / 5 * 100)) / 2;
+
+                    if (tripScore > userScore && tripScore < userScore + 30) {
+                        challenge.add(trip);
+                    }
                 }
             }
-
         }
 
         playlistContainer.setPadding(false);

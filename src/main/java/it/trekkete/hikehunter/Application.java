@@ -15,7 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * and some desktop browsers.
  *
  */
-@SpringBootApplication(scanBasePackages = "it.trekkete")
+@SpringBootApplication(scanBasePackages = "it.trekkete.hikehunter")
 @NpmPackage(value = "@fontsource/nunito", version = "4.5.0")
 @Theme(value = "hike-hunter", variant = Lumo.LIGHT)
 @PWA(name = "hike-hunter", shortName = "hike-hunter", offlineResources = {})
