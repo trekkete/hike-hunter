@@ -62,6 +62,7 @@ public class LoginView extends VerticalLayout implements HasUrlParameter<String>
         addClassNames(LumoUtility.AlignItems.CENTER);
 
         VerticalLayout container = new VerticalLayout();
+        container.setSizeUndefined();
         container.setSpacing(false);
         container.addClassNames(LumoUtility.AlignItems.CENTER);
 
