@@ -160,7 +160,7 @@ public class MainLayout extends AppLayout implements AfterNavigationObserver {
 
         preferences = new RouterLink();
         preferences.setRoute(PreferencesView.class);
-        preferences.add(FontAwesome.Solid.COG.create());
+        preferences.add(FontAwesome.Solid.BARS.create());
         preferences.getStyle()
                 .set("text-decoration", "none")
                 .set("right", "10px");
