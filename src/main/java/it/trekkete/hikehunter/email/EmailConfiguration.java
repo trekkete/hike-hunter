@@ -2,10 +2,8 @@ package it.trekkete.hikehunter.email;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 
@@ -53,13 +51,6 @@ public class EmailConfiguration {
         props.put("mail.debug", "true");
 
         return mailSender;
-    }
-
-    @Bean
-    public SimpleMailMessage templateSimpleMessage() {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setText("Il tuo codice per la verifica della mail è:\n%s\n");
-        return message;
     }
 
     @Bean

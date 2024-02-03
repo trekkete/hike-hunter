@@ -6,7 +6,6 @@ public class UserExtendedData implements Serializable {
 
     private String name;
     private String surname;
-    private String email;
     private String phoneNumber;
     private String profilePicture;
 
@@ -24,14 +23,6 @@ public class UserExtendedData implements Serializable {
 
     public void setSurname(String surname) {
         this.surname = surname;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public String getPhoneNumber() {

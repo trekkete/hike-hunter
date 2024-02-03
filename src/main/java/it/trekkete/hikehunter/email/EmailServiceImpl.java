@@ -18,13 +18,10 @@ public class EmailServiceImpl implements EmailService {
     private JavaMailSender emailSender;
 
     @Autowired
-    private SimpleMailMessage template;
-
-    @Autowired
     private String senderAddress;
 
     @Override
-    public void sendMessage(String to, String subject, String... args) {
+    public void sendMessage(String to, String subject, SimpleMailMessage template, String... args) {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(senderAddress);

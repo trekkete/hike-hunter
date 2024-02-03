@@ -33,6 +33,7 @@ import it.trekkete.hikehunter.data.service.EmailVerificationTokenRepository;
 import it.trekkete.hikehunter.data.service.EmailVerificationTokenService;
 import it.trekkete.hikehunter.data.service.UserRepository;
 import it.trekkete.hikehunter.email.EmailService;
+import it.trekkete.hikehunter.email.EmailTemplate;
 import it.trekkete.hikehunter.ui.window.ContactInfoWindow;
 import it.trekkete.hikehunter.ui.window.PasswordInfoWindow;
 import it.trekkete.hikehunter.utils.AppEvents;
@@ -112,7 +113,7 @@ public class RegistrationView extends VerticalLayout {
 
         container.removeAll();
 
-        H4 stageTitle = new H4("Informarmazioni del profilo");
+        H4 stageTitle = new H4("Informazioni del profilo");
         stageTitle.addClassNames(LumoUtility.Margin.NONE);
 
         container.add(stageTitle);
@@ -233,8 +234,8 @@ public class RegistrationView extends VerticalLayout {
 
         email.setSuffixComponent(more);
 
-        if (userExtendedData.getEmail() != null)
-            email.setValue(userExtendedData.getEmail());
+        if (user.getEmail() != null)
+            email.setValue(user.getEmail());
 
         TextField phoneNumber = new TextField("Numero di telefono");
         phoneNumber.setPattern("^([\\+][0-9]{1,3})?[0-9]{10}$");
@@ -265,8 +266,15 @@ public class RegistrationView extends VerticalLayout {
                 return;
             }
 
+            if (userRepository.findByEmail(email.getValue()) != null) {
+                email.setInvalid(true);
+                email.setErrorMessage("Esiste già un account associato a questa email");
+
+                return;
+            }
+
             if(email.getValue() != null && !email.isEmpty()) {
-                userExtendedData.setEmail(email.getValue().trim());
+                user.setEmail(email.getValue().trim());
             }
 
             if(phoneNumber.getValue() != null && !phoneNumber.isEmpty()) {
@@ -276,16 +284,16 @@ public class RegistrationView extends VerticalLayout {
             user.setExtendedData(new Gson().toJson(userExtendedData));
 
             EmailVerificationToken emailVerificationToken = new EmailVerificationToken();
-            emailVerificationToken.setEmail(userExtendedData.getEmail());
+            emailVerificationToken.setEmail(user.getEmail());
             emailVerificationToken.setToken(RandomStringUtils.random(6, false, true));
             emailVerificationToken.setCreationTs(ZonedDateTime.now().toEpochSecond());
 
             emailVerificationTokenService.save(emailVerificationToken);
 
             try {
-                emailService.sendMessage(userExtendedData.getEmail(), "Verifica la tua mail", emailVerificationToken.getToken());
+                emailService.sendMessage(user.getEmail(), "Verifica la tua mail", EmailTemplate.MAIL_VALIDATION, emailVerificationToken.getToken());
             } catch (MessagingException e) {
-                log.warn("Error sending mail verification token to {}", userExtendedData.getEmail());
+                log.warn("Error sending mail verification token to {}", user.getEmail());
 
                 Notification notification = new Notification();
                 notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
@@ -340,12 +348,10 @@ public class RegistrationView extends VerticalLayout {
         stageThreeLayout.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
                 new FormLayout.ResponsiveStep("600px", 2));
 
-        UserExtendedData userExtendedData = new Gson().fromJson(user.getExtendedData(), UserExtendedData.class);
-
         TextField code = new TextField("Codice");
         code.setMinLength(6);
         code.setMaxLength(6);
-        code.setHelperText("Abbiamo inviato un codice a " + userExtendedData.getEmail() + ". Inseriscilo per verificare la tua mail.");
+        code.setHelperText("Abbiamo inviato un codice a " + user.getEmail() + ". Inseriscilo per verificare la tua mail.");
         code.addThemeVariants(TextFieldVariant.LUMO_HELPER_ABOVE_FIELD, TextFieldVariant.LUMO_ALIGN_CENTER);
 
         stageThreeLayout.add(code);
@@ -361,7 +367,7 @@ public class RegistrationView extends VerticalLayout {
 
             emailVerificationTokenService.deleteOldTokens();
 
-            EmailVerificationToken evt = emailVerificationTokenService.findByEmail(userExtendedData.getEmail());
+            EmailVerificationToken evt = emailVerificationTokenService.findByEmail(user.getEmail());
             if (evt == null) {
                 code.setInvalid(true);
                 code.setErrorMessage("Non esiste un codice di validazione per la mail impostata. Riprovare più tardi.");
