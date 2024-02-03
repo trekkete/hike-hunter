@@ -1,0 +1,4 @@
+:host([theme~="left-align"]) .vaadin-button-container {
+    justify-content: start;
+    padding-left: var(--lumo-space-s);
+}
