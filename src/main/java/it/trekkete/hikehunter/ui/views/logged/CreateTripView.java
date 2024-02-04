@@ -6,6 +6,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.contextmenu.ContextMenu;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
@@ -13,6 +14,7 @@ import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
@@ -22,6 +24,7 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 import it.trekkete.hikehunter.data.entity.Location;
 import it.trekkete.hikehunter.data.entity.Trip;
 import it.trekkete.hikehunter.data.entity.TripLocation;
@@ -31,10 +34,17 @@ import it.trekkete.hikehunter.data.service.TripLocationRepository;
 import it.trekkete.hikehunter.data.service.TripParticipantsRepository;
 import it.trekkete.hikehunter.data.service.TripRepository;
 import it.trekkete.hikehunter.map.LMap;
+import it.trekkete.hikehunter.map.LOverpassLayer;
+import it.trekkete.hikehunter.overpass.OverpassQueryBuilder;
+import it.trekkete.hikehunter.overpass.OverpassQueryOptions;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.general.HomeView;
+import it.trekkete.hikehunter.ui.window.QueryResultWindow;
 import it.trekkete.hikehunter.utils.MapUtils;
+import kong.unirest.json.JSONObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import software.xdev.vaadin.maps.leaflet.flow.data.LMarker;
 import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
@@ -49,6 +59,8 @@ import java.util.*;
 @Route(value = "new-trip", layout = MainLayout.class)
 @PermitAll
 public class CreateTripView extends VerticalLayout {
+
+    private final Logger log = LogManager.getLogger(CreateTripView.class);
 
     public enum TripMode {
         GIORNATA,
@@ -293,16 +305,47 @@ public class CreateTripView extends VerticalLayout {
             }
         });
 
+        Button mock = new Button();
+        mock.addClassNames(LumoUtility.Position.ABSOLUTE, LumoUtility.Display.HIDDEN);
+
+        ContextMenu info = new ContextMenu(mock);
+        info.setOpenOnClick(true);
+        info.add(new Span("Test"));
+
         map = new LMap(LMap.Locations.ROME);
         map.setTileLayer(LTileLayer.DEFAULT_OPENSTREETMAP_TILE);
         map.getElement().executeJs("this.map.options.minZoom = 6;");
         map.setSizeFull();
+        map.addClickListener((lat, lon) -> {
+
+            String query = new OverpassQueryBuilder()
+                    .setOutput(OverpassQueryOptions.Output.GEOM)
+                    .setQuery("nwr(around:20," + lat + "," + lon + ")[name][!boundary];").build();
+
+            log.trace("click query: {}", query);
+
+            LOverpassLayer overpassLayer = map.addOverpassLayer();
+            overpassLayer.query(query);
+
+            overpassLayer.getNodes().forEach((id, node) -> {
+                map.addData(MapUtils.elementToGeoJson((JSONObject) node, ((JSONObject) node).getString("name"), "88aaff"));
+            });
+
+            overpassLayer.getWays().forEach((id, way) -> {
+                map.addData(MapUtils.elementToGeoJson((JSONObject) way, ((JSONObject) way).getString("name"), "88aaff"));
+            });
+
+            mock.clickInClient();
+            info.removeAll();
+            info.add(new QueryResultWindow(overpassLayer.getResults()));
+        });
 
         VerticalLayout mapContainer = new VerticalLayout(map);
         mapContainer.setSizeFull();
         mapContainer.setPadding(false);
         mapContainer.setMinHeight("400px");
         mapContainer.setHeight("0px");
+        mapContainer.add(mock);
 
         locationGrid = new Grid<>();
         locationGrid.setSizeFull();

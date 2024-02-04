@@ -28,7 +28,6 @@ import it.trekkete.hikehunter.overpass.OverpassQueryOptions;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.logged.CreateTripView;
-import it.trekkete.hikehunter.ui.window.ContactInfoWindow;
 import it.trekkete.hikehunter.ui.window.LayersToggleWindow;
 import it.trekkete.hikehunter.utils.AppEvents;
 import it.trekkete.hikehunter.utils.MapUtils;
@@ -114,9 +113,6 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
 
         log.trace("Overpass query: {}", query);
 
-        LOverpassLayer overpassLayer =
-                new LOverpassLayer("https://overpass-api.de/api/interpreter", query);
-
         map = new LMap(LMap.Locations.ROME);
         map.toggleTileLayer(LMap.Layers.DEFAULT_OPENSTREETMAP);
         //map.toggleTileLayer(LMap.Layers.WAYMARKEDTRAILS_HIKING);
@@ -124,7 +120,9 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
         map.setWidthFull();
         map.setMinHeight("100%");
         map.setHeight("900px");
-        map.setOverpassLayer(overpassLayer);
+
+        LOverpassLayer overpassLayer = map.addOverpassLayer();
+        overpassLayer.query(query);
 
         available.forEach(trip -> {
 
@@ -133,14 +131,17 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
             String color = Integer.toHexString(Color.getHSBColor(new Random().nextFloat(0.5f, 1.0f), 1.0f, 0.36f).getRGB()).substring(2);
 
             if (locations.size() > 1) {
-                map.addData(MapUtils.tripToGeoJson(locations.stream().map(tripLocation -> locationRepository.findLocationById(tripLocation.getLocation())).toList(), trip.getTitle(), trip.getId().toString(), color));
+                map.addData(MapUtils.tripToGeoJson(
+                        locations.stream().map(tripLocation -> locationRepository.findLocationById(tripLocation.getLocation())).toList(),
+                        "<div style=\"display: flex; flex-direction: column;\"><div style=\"font-weight: bold; display: flex;\"><span style=\"text-align: center;\">" + trip.getTitle() + "</span></div><a href=\"/trip/" + trip.getId().toString() + "\">Vedi l'escursione</a></div>",
+                        color));
             }
 
             locations.forEach(location -> {
 
                 JSONObject element = (JSONObject) overpassLayer.get(location.getLocation());
 
-                map.addData(MapUtils.elementToGeoJson(element, trip.getTitle(), location.getTrip().toString(), color));
+                map.addData(MapUtils.elementToGeoJson(element, "<div style=\"display: flex; flex-direction: column;\"><div style=\"font-weight: bold; display: flex;\"><span style=\"text-align: center;\">" + trip.getTitle() + "</span></div><a href=\"/trip/" + location.getTrip().toString() + "\" onclick=\"sessionStorage.setItem('" + AppEvents.REROUTING_TRIP + "', '" + location.getTrip().toString() + "')\">Vedi l'escursione</a></div>", color));
             });
         });
 

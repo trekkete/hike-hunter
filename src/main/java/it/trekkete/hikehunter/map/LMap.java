@@ -1,8 +1,11 @@
 package it.trekkete.hikehunter.map;
 
+import com.vaadin.flow.component.ClientCallable;
 import it.trekkete.hikehunter.data.entity.Location;
 import kong.unirest.json.JSONObject;
 import org.apache.commons.text.StringEscapeUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.xdev.vaadin.maps.leaflet.flow.data.LCenter;
 import software.xdev.vaadin.maps.leaflet.flow.data.LPoint;
 import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
@@ -12,7 +15,10 @@ import java.util.Map;
 
 public class LMap extends software.xdev.vaadin.maps.leaflet.flow.LMap {
 
+    private final Logger log = LogManager.getLogger(LMap.class);
+
     private static final String CLIENT_OVERPASS_LAYER = "this.oplayer";
+    private LMapClickable clickable;
 
     private final Map<String, LTileLayer> layers;
 
@@ -35,12 +41,14 @@ public class LMap extends software.xdev.vaadin.maps.leaflet.flow.LMap {
         super();
 
         this.layers = new HashMap<>();
+        this.clickable = null;
     }
 
     public LMap(LCenter center) {
         super(center.getLat(), center.getLon(), center.getZoom());
 
         this.layers = new HashMap<>();
+        this.clickable = null;
     }
 
     public void toggleTileLayer(LTileLayer tileLayer) {
@@ -52,8 +60,7 @@ public class LMap extends software.xdev.vaadin.maps.leaflet.flow.LMap {
 
             this.getElement().executeJs(removeTileLayerIfPresent);
             layers.remove(tileLayerVar);
-        }
-        else {
+        } else {
             String link = StringEscapeUtils.escapeEcmaScript(tileLayer.getLink());
             String attribution = StringEscapeUtils.escapeEcmaScript(tileLayer.getAttribution());
             String id = StringEscapeUtils.escapeEcmaScript(tileLayer.getId());
@@ -65,7 +72,10 @@ public class LMap extends software.xdev.vaadin.maps.leaflet.flow.LMap {
         }
     }
 
-    public void setOverpassLayer(LOverpassLayer overpassLayer) {
+    public LOverpassLayer addOverpassLayer() {
+
+        LOverpassLayer overpassLayer =
+                new LOverpassLayer("https://overpass-api.de/api/interpreter");
 
         this.getElement().executeJs("if (" + CLIENT_OVERPASS_LAYER + ") {this.map.removeLayer(" + CLIENT_OVERPASS_LAYER + ");}");
         this.getElement().executeJs(CLIENT_OVERPASS_LAYER + "=new L.GeoJSON(null, {" +
@@ -82,13 +92,17 @@ public class LMap extends software.xdev.vaadin.maps.leaflet.flow.LMap {
                 "}" +
                 "});");
 
-        overpassLayer.query();
-
         this.getElement().executeJs("this.map.addLayer(" + CLIENT_OVERPASS_LAYER + ");");
+
+        return overpassLayer;
     }
 
     public void addData(JSONObject geojson) {
         this.getElement().executeJs(CLIENT_OVERPASS_LAYER + ".addData(" + geojson + ");");
+    }
+
+    public void clear() {
+        this.getElement().executeJs(CLIENT_OVERPASS_LAYER + ".clearLayers();");
     }
 
     public void fitBounds(Location... locations) {
@@ -113,5 +127,21 @@ public class LMap extends software.xdev.vaadin.maps.leaflet.flow.LMap {
         }
 
         this.centerAndZoom(new LPoint(minLat, minLon), new LPoint(maxLat, maxLon));
+    }
+
+    public void addClickListener(LMapClickable clickable) {
+        this.getElement().executeJs("this.map.on('click', function(e) { $0.$server.getClickEventCoordinates(e.latlng.lat,e.latlng.lng);});", getElement());
+
+        this.clickable = clickable;
+    }
+
+    @ClientCallable
+    public void getClickEventCoordinates(Double lat, Double lon) {
+
+        log.trace("Clicked on map at lat: {}, lon: {}", lat, lon);
+
+        if (clickable != null) {
+            clickable.apply(lat, lon);
+        }
     }
 }

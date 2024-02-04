@@ -6,6 +6,8 @@ import kong.unirest.Unirest;
 import kong.unirest.json.JSONArray;
 import kong.unirest.json.JSONElement;
 import kong.unirest.json.JSONObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
 
 import java.net.URLEncoder;
@@ -15,23 +17,32 @@ import java.util.Map;
 
 public class LOverpassLayer {
 
+    private final Logger log = LogManager.getLogger(LOverpassLayer.class);
+
     public static final LTileLayer DEFAULT_OVERPASS_TILE = new LTileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", "© <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>, POI via <a href=\"http://www.overpass-api.de/\">Overpass API</a>", 18);
 
-    private String endpoint;
-    private String query;
+    private final String endpoint;
 
-    private final Map<String, JSONElement> nodes;
-    private final Map<String, JSONElement> ways;
+    private Map<String, JSONElement> nodes;
+    private Map<String, JSONElement> ways;
 
-    public LOverpassLayer(String endpoint, String query) {
+    private Map<String, JSONElement> results;
+
+    public LOverpassLayer(String endpoint) {
         this.endpoint = endpoint;
-        this.query = query;
 
-        nodes = new HashMap<>();
-        ways = new HashMap<>();
+        reset();
     }
 
-    public JSONObject query() {
+    private void reset() {
+        nodes = new HashMap<>();
+        ways = new HashMap<>();
+        results = new HashMap<>();
+    }
+
+    public JSONObject query(String query) {
+
+        reset();
 
         String data = "data=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
 
@@ -68,65 +79,25 @@ public class LOverpassLayer {
                     String type = element.getString("type");
 
                     switch (type) {
-                        case "node": {
+                        case "node":
+                            parseNode(element, "id", null);
 
-                            if (!element.has("lat") || !element.has("lon"))
-                                continue;
-
-                            Double lat = element.getDouble("lat");
-                            Double lon = element.getDouble("lon");
-
-                            JSONArray coordinates = new JSONArray();
-                            coordinates.put(lon);
-                            coordinates.put(lat);
-
-                            element.put("coordinates", coordinates);
-
-                            JSONObject geometry = new JSONObject();
-                            geometry.put("type", "Point");
-                            geometry.put("coordinates", coordinates);
-
-                            element.put("geometry", geometry);
-
-                            nodes.put(element.getString("id"), element);
-                        }
-                        case "way" : {
-
-                            if (!element.has("nodes"))
-                                continue;
-
-                            JSONArray coordinatesList = element.getJSONArray("geometry");
-
-                            JSONArray coordinates = new JSONArray();
-                            coordinatesList.forEach(_element -> {
-
-                                JSONObject _coordinate = (JSONObject) _element;
-
-                                if (!_coordinate.has("lat") || !_coordinate.has("lon"))
-                                    return;
-
-                                JSONArray coordinate = new JSONArray();
-                                coordinate.put(_coordinate.getDouble("lon"));
-                                coordinate.put(_coordinate.getDouble("lat"));
-
-                                coordinates.put(coordinate);
-                            });
-
-                            element.put("coordinates", coordinates);
-
-                            JSONObject geometry = new JSONObject();
-                            geometry.put("type", "LineString");
-                            geometry.put("coordinates", coordinates);
-
-                            element.put("geometry", geometry);
-
-                            ways.put(element.getString("id"), element);
-
-                        }
+                            break;
+                        case "way" :
+                            parseWay(element, "id", null);
+                            break;
                         case "relation" : {
 
                             if (!element.has("members") || element.getJSONArray("members").isEmpty()) {
                                 break;
+                            }
+
+                            String name;
+                            if (element.has("tags") || element.getJSONObject("tags").has("name")) {
+                                name = element.getJSONObject("tags").getString("name");
+                                element.put("name", name);
+                            } else {
+                                name = null;
                             }
 
                             JSONArray members = element.getJSONArray("members");
@@ -135,34 +106,101 @@ public class LOverpassLayer {
                                 JSONObject mem = (JSONObject) _mem;
 
                                 if (mem.getString("type").equals("node")) {
-                                    mem.put("obj", nodes.get(String.valueOf(mem.getLong("ref"))));
+                                    parseNode(mem, "ref", name);
                                 }
                                 else {
-                                    mem.put("obj", ways.get(String.valueOf(mem.getLong("ref"))));
+                                    parseWay(mem, "ref", name);
                                 }
                             });
 
                         }
+                        break;
                     }
                 }
+
+                this.results.put(element.getString("id"), element);
             }
         }
     }
 
-    public String getEndpoint() {
-        return endpoint;
+    private void parseNode(JSONObject element, String idKey, String name) {
+        if (!element.has("lat") || !element.has("lon"))
+            return;
+
+        Double lat = element.getDouble("lat");
+        Double lon = element.getDouble("lon");
+
+        JSONArray coordinates = new JSONArray();
+        coordinates.put(lon);
+        coordinates.put(lat);
+
+        element.put("coordinates", coordinates);
+
+        JSONObject geometry = new JSONObject();
+        geometry.put("type", "Point");
+        geometry.put("coordinates", coordinates);
+
+        element.put("geometry", geometry);
+
+        if (element.has("tags") && element.getJSONObject("tags").has("name"))
+            element.put("name", element.getJSONObject("tags").getString("name"));
+        else if (name != null){
+            element.put("name", name);
+        }
+
+        if (!element.has("name"))
+            log.trace(element);
+
+        nodes.put(element.getString(idKey), element);
     }
 
-    public void setEndpoint(String endpoint) {
-        this.endpoint = endpoint;
-    }
+    private void parseWay(JSONObject element, String idKey, String name) {
 
-    public String getQuery() {
-        return query;
-    }
+        if (!element.has("geometry"))
+            return;
 
-    public void setQuery(String query) {
-        this.query = query;
+        JSONArray coordinatesList;
+        try {
+            coordinatesList = element.getJSONArray("geometry");
+        } catch (Exception e) {
+            log.trace("Could not find 'geometry' element for way: {}", element);
+
+            return;
+        }
+
+        JSONArray coordinates = new JSONArray();
+        coordinatesList.forEach(_element -> {
+
+            JSONObject _coordinate = (JSONObject) _element;
+
+            if (!_coordinate.has("lat") || !_coordinate.has("lon"))
+                return;
+
+            JSONArray coordinate = new JSONArray();
+            coordinate.put(_coordinate.getDouble("lon"));
+            coordinate.put(_coordinate.getDouble("lat"));
+
+            coordinates.put(coordinate);
+        });
+
+        element.put("coordinates", coordinates);
+
+        JSONObject geometry = new JSONObject();
+        geometry.put("type", "LineString");
+        geometry.put("coordinates", coordinates);
+
+        element.put("geometry", geometry);
+
+        if (element.has("tags") && element.getJSONObject("tags").has("name"))
+            element.put("name", element.getJSONObject("tags").getString("name"));
+        else if (name != null){
+            element.put("name", name);
+        }
+
+        if (!element.has("name"))
+            log.trace(element.getString(idKey));
+
+        ways.put(element.getString(idKey), element);
     }
 
     public Map<String, JSONElement> getNodes() {
@@ -171,6 +209,10 @@ public class LOverpassLayer {
 
     public Map<String, JSONElement> getWays() {
         return ways;
+    }
+
+    public Map<String, JSONElement> getResults() {
+        return results;
     }
 
     public JSONElement get(String id) {
