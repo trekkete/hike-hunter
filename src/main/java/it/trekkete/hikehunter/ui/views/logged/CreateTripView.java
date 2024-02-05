@@ -309,6 +309,7 @@ public class CreateTripView extends VerticalLayout {
 
         Button mock = new Button();
         mock.addClassNames(LumoUtility.Position.ABSOLUTE, LumoUtility.Display.HIDDEN);
+        mock.getStyle().set("right", "-" + mock.getWidth());
 
         ContextMenu info = new ContextMenu(mock);
         info.setOpenOnClick(true);
@@ -320,8 +321,9 @@ public class CreateTripView extends VerticalLayout {
         map.addClickListener((lat, lon) -> {
 
             String query = new OverpassQueryBuilder()
-                    .setOutput(OverpassQueryOptions.Output.GEOM)
-                    .setQuery("nwr(around:20," + lat + "," + lon + ")[name][!boundary];").build();
+                    .setOutput(OverpassQueryOptions.Output.GEOM, OverpassQueryOptions.Output.QT)
+                    .setLimit(5)
+                    .setQuery("nwr(around:300," + lat + "," + lon + ")[~\"^name|^ref|^type\"~\".*\"][!information][!landuse][!boundary](if: count_tags() > 1);").build();
 
             log.trace("click query: {}", query);
 
@@ -366,6 +368,7 @@ public class CreateTripView extends VerticalLayout {
         mapContainer.setPadding(false);
         mapContainer.setMinHeight("400px");
         mapContainer.setHeight("0px");
+        mapContainer.addClassNames(LumoUtility.Position.RELATIVE);
         mapContainer.add(mock);
 
         locationGrid = new Grid<>();

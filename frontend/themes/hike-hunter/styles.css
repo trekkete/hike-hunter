@@ -42,8 +42,13 @@ html {
 }
 
 * {
-  --star-size: 0.8em;
-  --star-color: var(--lumo-primary-color);
+    --star-size: 0.8em;
+    --star-color: var(--lumo-primary-color);
+    --paper-slide-dot: var(--lumo-contrast-10pct);
+    --paper-slide-background: var(--lumo-base-color);
+    --paper-slide-dot-selected: var(--lumo-primary-color);
+    --paper-slide-width: 100%;
+    --paper-slide-height: 300px;
 }
 
 .option-layout {

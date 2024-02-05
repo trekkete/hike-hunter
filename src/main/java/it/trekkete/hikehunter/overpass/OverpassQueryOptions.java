@@ -18,16 +18,18 @@ public class OverpassQueryOptions {
     }
 
     private Format format;
-    private Output output;
+    private Output[] output;
+    private Integer limit;
 
     private String maxSize;
     private String timeout;
 
     public OverpassQueryOptions() {
-        this.output = Output.BODY;
+        this.output = new Output[]{ Output.BODY };
         this.timeout = "15";
         this.maxSize = "1073741824";
         this.format = Format.JSON;
+        this.limit = null;
     }
 
     public Format getFormat() {
@@ -38,11 +40,11 @@ public class OverpassQueryOptions {
         this.format = format;
     }
 
-    public Output getOutput() {
+    public Output[] getOutput() {
         return output;
     }
 
-    public void setOutput(Output output) {
+    public void setOutput(Output... output) {
         this.output = output;
     }
 
@@ -60,5 +62,13 @@ public class OverpassQueryOptions {
 
     public void setTimeout(String timeout) {
         this.timeout = timeout;
+    }
+
+    public Integer getLimit() {
+        return limit;
+    }
+
+    public void setLimit(Integer limit) {
+        this.limit = limit;
     }
 }

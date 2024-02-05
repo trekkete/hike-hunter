@@ -42,13 +42,20 @@ public class OverpassQueryBuilder {
         }
 
         if (options.getOutput() != null) {
-            builder.append("out ").append(options.getOutput().name().toLowerCase());
+            builder.append("out ");
+            for (OverpassQueryOptions.Output output : options.getOutput()) {
+                builder.append(output.name().toLowerCase()).append(" ");
+            }
+
+            if (options.getLimit() != null) {
+                builder.append(options.getLimit());
+            }
+
+            builder.append(";");
         }
         else {
             throw new RuntimeException("Overpass API output format cannot be null");
         }
-
-        builder.append(";");
 
         return builder.toString();
 
@@ -68,7 +75,7 @@ public class OverpassQueryBuilder {
         return this;
     }
 
-    public OverpassQueryBuilder setOutput(OverpassQueryOptions.Output output) {
+    public OverpassQueryBuilder setOutput(OverpassQueryOptions.Output... output) {
         options.setOutput(output);
 
         return this;
@@ -88,6 +95,12 @@ public class OverpassQueryBuilder {
 
     public OverpassQueryBuilder setQuery(String query) {
         this.query = query;
+
+        return this;
+    }
+
+    public OverpassQueryBuilder setLimit(Integer limit) {
+        options.setLimit(limit);
 
         return this;
     }

@@ -2,16 +2,16 @@ package it.trekkete.hikehunter.ui.window;
 
 import com.flowingcode.vaadin.addons.carousel.Carousel;
 import com.flowingcode.vaadin.addons.carousel.Slide;
-import com.google.gson.Gson;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.theme.lumo.LumoUtility;
+import it.trekkete.hikehunter.overpass.OverpassElementKeys;
 import kong.unirest.json.JSONElement;
 import kong.unirest.json.JSONObject;
 
@@ -30,7 +30,9 @@ public class QueryResultWindow extends VerticalLayout {
     private void constructUI() {
 
         setPadding(false);
+        setSpacing(false);
         setMinWidth("300px");
+        setMaxHeight("calc(var(--paper-slide-height) + 60px)");
 
         selectButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
 
@@ -48,17 +50,24 @@ public class QueryResultWindow extends VerticalLayout {
             JSONObject element = (JSONObject) elements.values().stream().toList().get(i);
 
             VerticalLayout slideContent = new VerticalLayout();
+            slideContent.setMaxHeight("calc(var(--paper-slide-height) - 50px)");
+            slideContent.getStyle().set("overflow-y", "scroll");
 
-            JSONObject tags = element.getJSONObject("tags");
+            Map<String, Object> tags = element.getJSONObject("tags").toMap();
 
-            tags.toMap().forEach((k, v) -> {
-                slideContent.add(new Span(k + ": " + v));
-            });
+            if (tags.containsKey(OverpassElementKeys.NAME)) {
+
+                H4 title = new H4(String.valueOf(tags.get(OverpassElementKeys.NAME)));
+                title.addClassNames(LumoUtility.Margin.NONE);
+
+                slideContent.add(title);
+            }
 
             slides[i] = new Slide(slideContent);
         }
 
         Carousel carousel = new Carousel(slides);
+        carousel.setWidthFull();
 
         add(buttonContainer, carousel);
 

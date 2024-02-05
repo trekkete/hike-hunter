@@ -95,7 +95,7 @@ public class LOverpassLayer {
                             }
 
                             String name;
-                            if (element.has("tags") || element.getJSONObject("tags").has("name")) {
+                            if (element.has("tags") && element.getJSONObject("tags").has("name")) {
                                 name = element.getJSONObject("tags").getString("name");
                                 element.put("name", name);
                             } else {
@@ -257,14 +257,6 @@ public class LOverpassLayer {
         });
 
         return geoJson;
-    }
-
-    public Map<String, JSONElement> getNodes() {
-        return nodes;
-    }
-
-    public Map<String, JSONElement> getWays() {
-        return ways;
     }
 
     public Map<String, JSONElement> getResults() {
