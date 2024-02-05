@@ -34,8 +34,6 @@ public class OverpassQueryBuilder {
 
         builder.append(";");
 
-        builder.append("( area[\"ISO3166-1\"=\"IT\"]; )->.italia;");
-
         if (query != null && !query.isEmpty()) {
             builder.append(query);
         }

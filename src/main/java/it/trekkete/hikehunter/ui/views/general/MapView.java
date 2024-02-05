@@ -7,6 +7,9 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
+import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
@@ -21,6 +24,7 @@ import it.trekkete.hikehunter.data.service.LocationRepository;
 import it.trekkete.hikehunter.data.service.TripLocationRepository;
 import it.trekkete.hikehunter.data.service.TripRepository;
 import it.trekkete.hikehunter.data.service.TripService;
+import it.trekkete.hikehunter.map.LGeoJSONProperties;
 import it.trekkete.hikehunter.map.LMap;
 import it.trekkete.hikehunter.map.LOverpassLayer;
 import it.trekkete.hikehunter.overpass.OverpassQueryBuilder;
@@ -108,7 +112,7 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
             });
         });
 
-        String query = new OverpassQueryBuilder().setQuery("(" + sb + ");(._; >;);")
+        String query = new OverpassQueryBuilder().setQuery("(" + sb + ");")
                 .setOutput(OverpassQueryOptions.Output.GEOM).build();
 
         log.trace("Overpass query: {}", query);
@@ -141,7 +145,21 @@ public class MapView extends VerticalLayout implements PropertyChangeListener {
 
                 JSONObject element = (JSONObject) overpassLayer.get(location.getLocation());
 
-                map.addData(MapUtils.elementToGeoJson(element, "<div style=\"display: flex; flex-direction: column;\"><div style=\"font-weight: bold; display: flex;\"><span style=\"text-align: center;\">" + trip.getTitle() + "</span></div><a href=\"/trip/" + location.getTrip().toString() + "\" onclick=\"sessionStorage.setItem('" + AppEvents.REROUTING_TRIP + "', '" + location.getTrip().toString() + "')\">Vedi l'escursione</a></div>", color));
+                map.addData(overpassLayer.elementToGeoJson(element, new LGeoJSONProperties(), (elem) -> {
+
+                    Span title = new Span(trip.getTitle());
+                    title.addClassNames(LumoUtility.TextAlignment.CENTER);
+
+                    Div content = new Div(title);
+                    content.addClassNames(LumoUtility.Display.FLEX, LumoUtility.FontWeight.BOLD);
+
+                    Anchor anchor = new Anchor("/trip/" + location.getTrip().toString(), "Vedi l'escursione");
+
+                    Div container = new Div(content, anchor);
+                    container.addClassNames(LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN);
+
+                    return container;
+                }));
             });
         });
 

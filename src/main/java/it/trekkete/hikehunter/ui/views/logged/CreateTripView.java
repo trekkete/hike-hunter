@@ -3,6 +3,7 @@ package it.trekkete.hikehunter.ui.views.logged;
 import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
 import com.google.gson.Gson;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -33,6 +34,7 @@ import it.trekkete.hikehunter.data.service.LocationRepository;
 import it.trekkete.hikehunter.data.service.TripLocationRepository;
 import it.trekkete.hikehunter.data.service.TripParticipantsRepository;
 import it.trekkete.hikehunter.data.service.TripRepository;
+import it.trekkete.hikehunter.map.LGeoJSONProperties;
 import it.trekkete.hikehunter.map.LMap;
 import it.trekkete.hikehunter.map.LOverpassLayer;
 import it.trekkete.hikehunter.overpass.OverpassQueryBuilder;
@@ -295,7 +297,7 @@ public class CreateTripView extends VerticalLayout {
 
             searchResultsGrid.setItems(locations);
 
-            if (locations.size() > 0) {
+            if (!locations.isEmpty()) {
                 searchResultsGrid.setVisible(true);
                 searchLocation.getStyle().set("margin-bottom", "0");
             }
@@ -310,7 +312,6 @@ public class CreateTripView extends VerticalLayout {
 
         ContextMenu info = new ContextMenu(mock);
         info.setOpenOnClick(true);
-        info.add(new Span("Test"));
 
         map = new LMap(LMap.Locations.ROME);
         map.setTileLayer(LTileLayer.DEFAULT_OPENSTREETMAP_TILE);
@@ -327,17 +328,37 @@ public class CreateTripView extends VerticalLayout {
             LOverpassLayer overpassLayer = map.addOverpassLayer();
             overpassLayer.query(query);
 
-            overpassLayer.getNodes().forEach((id, node) -> {
-                map.addData(MapUtils.elementToGeoJson((JSONObject) node, ((JSONObject) node).getString("name"), "88aaff"));
-            });
+            map.addData(overpassLayer.toGeoJSON(
+                    (feature) -> {
+                        return new LGeoJSONProperties();
+                    },
+                    (feature) -> {
+                        JSONObject element = (JSONObject) feature;
 
-            overpassLayer.getWays().forEach((id, way) -> {
-                map.addData(MapUtils.elementToGeoJson((JSONObject) way, ((JSONObject) way).getString("name"), "88aaff"));
-            });
+                        if (element.has("tags") && element.getJSONObject("tags").has("name")) {
+                            return new Text(element.getJSONObject("tags").getString("name"));
+                        } else if (element.has("name")) {
+                            return new Text(element.getString("name"));
+                        } else if (element.has("id")) {
+                            return new Text(element.getString("id"));
+                        }
+
+                        return new Text("Sconosciuto");
+                    }
+            ));
+
+            if (overpassLayer.getResults().isEmpty())
+                return;
 
             mock.clickInClient();
             info.removeAll();
-            info.add(new QueryResultWindow(overpassLayer.getResults()));
+
+            QueryResultWindow qrw = new QueryResultWindow(overpassLayer.getResults());
+            qrw.addCloseListener(click -> {
+                info.close();
+            });
+
+            info.add(qrw);
         });
 
         VerticalLayout mapContainer = new VerticalLayout(map);

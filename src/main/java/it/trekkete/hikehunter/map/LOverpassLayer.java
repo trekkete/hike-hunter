@@ -1,5 +1,7 @@
 package it.trekkete.hikehunter.map;
 
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.html.Span;
 import kong.unirest.ContentType;
 import kong.unirest.JsonNode;
 import kong.unirest.Unirest;
@@ -201,6 +203,60 @@ public class LOverpassLayer {
             log.trace(element.getString(idKey));
 
         ways.put(element.getString(idKey), element);
+    }
+
+    public JSONObject elementToGeoJson(JSONObject source, LGeoJSONProperties styleProperties, LGeoJSONTemplate template) {
+
+        JSONObject properties = new JSONObject();
+        properties.put("name", template.get(source).getElement().getOuterHTML());
+
+        JSONObject style = new JSONObject();
+        style.put("color", styleProperties.getColor());
+        style.put("weight", styleProperties.getWeight());
+
+        properties.put("style", style);
+        properties.put("radius", styleProperties.getRadius());
+
+        JSONObject geo = new JSONObject();
+        //TODO guardare il tipo di elemento e fare il rendering appropriato, anche delle relation
+        if (source.has("type") && source.getString("type").equals("relation")) {
+            geo.put("type", "FeatureCollection");
+
+            JSONArray features = new JSONArray();
+
+            if (!source.has("members") || source.getJSONArray("members").isEmpty()) {
+                return geo;
+            }
+
+            JSONArray members = source.getJSONArray("members");
+
+            members.forEach(_mem -> {
+                features.put(elementToGeoJson((JSONObject) _mem, styleProperties, template));
+            });
+
+            geo.put("features", features);
+        }
+        else {
+            geo.put("type", "Feature");
+            geo.put("geometry", source.get("geometry"));
+            geo.put("properties", properties);
+        }
+
+        return geo;
+    }
+
+    public JSONArray toGeoJSON(LGeoJSONStylable stylable, LGeoJSONTemplate template) {
+
+        JSONArray geoJson = new JSONArray();
+
+        results.forEach((id, _e) -> {
+
+            JSONObject element = (JSONObject) _e;
+
+            geoJson.put(elementToGeoJson(element, stylable.style(element), template));
+        });
+
+        return geoJson;
     }
 
     public Map<String, JSONElement> getNodes() {

@@ -2,6 +2,7 @@ package it.trekkete.hikehunter.map;
 
 import com.vaadin.flow.component.ClientCallable;
 import it.trekkete.hikehunter.data.entity.Location;
+import kong.unirest.json.JSONElement;
 import kong.unirest.json.JSONObject;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
@@ -97,7 +98,7 @@ public class LMap extends software.xdev.vaadin.maps.leaflet.flow.LMap {
         return overpassLayer;
     }
 
-    public void addData(JSONObject geojson) {
+    public void addData(JSONElement geojson) {
         this.getElement().executeJs(CLIENT_OVERPASS_LAYER + ".addData(" + geojson + ");");
     }
 

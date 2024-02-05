@@ -2,7 +2,10 @@ package it.trekkete.hikehunter.ui.window;
 
 import com.flowingcode.vaadin.addons.carousel.Carousel;
 import com.flowingcode.vaadin.addons.carousel.Slide;
+import com.google.gson.Gson;
 import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.ClickEvent;
+import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.Span;
@@ -17,23 +20,26 @@ import java.util.Map;
 public class QueryResultWindow extends VerticalLayout {
 
     private final Map<String, JSONElement> elements;
+    private final Button selectButton;
 
     public QueryResultWindow(Map<String, JSONElement> elements) {
         this.elements = elements;
+        this.selectButton = new Button("Seleziona");
     }
 
     private void constructUI() {
 
         setPadding(false);
+        setMinWidth("300px");
 
-        Button select = new Button("Seleziona");
-        select.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
+        selectButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
 
-        HorizontalLayout buttonContainer = new HorizontalLayout(select);
+        HorizontalLayout buttonContainer = new HorizontalLayout(selectButton);
         buttonContainer.addClassNames(
                 LumoUtility.Width.FULL,
                 LumoUtility.JustifyContent.END,
-                LumoUtility.AlignItems.CENTER);
+                LumoUtility.AlignItems.CENTER,
+                LumoUtility.Padding.Horizontal.SMALL);
 
         Slide[] slides = new Slide[elements.size()];
 
@@ -43,7 +49,11 @@ public class QueryResultWindow extends VerticalLayout {
 
             VerticalLayout slideContent = new VerticalLayout();
 
-            slideContent.add(new Span(element.getString("name")));
+            JSONObject tags = element.getJSONObject("tags");
+
+            tags.toMap().forEach((k, v) -> {
+                slideContent.add(new Span(k + ": " + v));
+            });
 
             slides[i] = new Slide(slideContent);
         }
@@ -59,5 +69,9 @@ public class QueryResultWindow extends VerticalLayout {
         super.onAttach(attachEvent);
 
         constructUI();
+    }
+
+    public void addCloseListener(ComponentEventListener<ClickEvent<Button>> listener) {
+        this.selectButton.addClickListener(listener);
     }
 }

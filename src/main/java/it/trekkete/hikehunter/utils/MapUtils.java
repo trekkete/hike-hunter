@@ -1,5 +1,6 @@
 package it.trekkete.hikehunter.utils;
 
+import com.vaadin.flow.component.html.Div;
 import it.trekkete.hikehunter.data.entity.Location;
 import it.trekkete.hikehunter.data.entity.TripLocation;
 import kong.unirest.Unirest;
@@ -90,28 +91,6 @@ public class MapUtils {
         sumLon /= locations.length;
 
         return new LCenter(sumLat, sumLon, 14);
-    }
-
-    public static JSONObject elementToGeoJson(JSONObject source, String name, String color) {
-
-        JSONObject geo = new JSONObject();
-        geo.put("type", "Feature");
-        geo.put("geometry", source.get("geometry"));
-
-        JSONObject properties = new JSONObject();
-        properties.put("name", name);
-
-        JSONObject style = new JSONObject();
-        style.put("color", "#" + color);
-        style.put("weight", "4");
-
-        properties.put("style", style);
-
-        properties.put("radius", 60);
-
-        geo.put("properties", properties);
-
-        return geo;
     }
 
     public static JSONObject tripToGeoJson(List<Location> tripLocations, String name, String color) {
