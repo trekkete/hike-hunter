@@ -10,6 +10,7 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.listbox.MultiSelectListBox;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.*;
@@ -35,10 +36,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @PageTitle("Dettaglio escursione")
 @Route(value = "trip/:tripId", layout = MainLayout.class)
@@ -173,39 +171,24 @@ public class JoinView extends VerticalLayout implements BeforeEnterObserver {
 
         container.add(equipmentTitle);
 
-        HorizontalLayout equipmentLayout = new HorizontalLayout();
-        equipmentLayout.addClassName("equipment-layout");
-        equipmentLayout.getStyle().set("overflow-x", "scroll");
-        equipmentLayout.setAlignItems(Alignment.CENTER);
-
-        Map<String, String> equipmentMap;
-        if (trip.getEquipment() != null)
-            equipmentMap = new Gson().fromJson(trip.getEquipment(), new TypeToken< Map<String, String>>(){}.getType());
-        else
-            equipmentMap = new HashMap<>();
-
-        equipmentMap.forEach((equipment, value) -> {
-
-            if (value.equals("true")) {
-
-                Image equip = new Image("images/" + equipment + "-selected.png", equipment);
-                equip.setMaxWidth("100px");
-                equip.setMaxHeight("100px");
-                equip.setTitle(equipment);
-
-                equipmentLayout.add(equip);
-            }
-        });
-
-        if (equipmentLayout.getComponentCount() == 0) {
+        if (trip.getEquipment() == null) {
             Span noMaterial = new Span("Nessun materiale particolare richiesto");
             noMaterial.setWidthFull();
             noMaterial.getStyle().set("text-align", "center");
 
-            equipmentLayout.add(noMaterial);
+            container.add(noMaterial);
         }
+        else {
+            MultiSelectListBox<Equipment> equipment = new MultiSelectListBox<>();
+            equipment.setItems(Equipment.values());
+            equipment.setItemLabelGenerator(equip -> equip.name().toLowerCase().replace("_", " "));
+            if (trip.getEquipment() != null) {
+                equipment.setItems(Arrays.stream(Equipment.values()).filter(e -> (trip.getEquipment() & e.getFlag()) == e.getFlag()).toList());
+            }
+            equipment.setReadOnly(true);
 
-        container.add(equipmentLayout);
+            container.add(equipment);
+        }
 
         container.add(new Separator(Separator.Orientation.HORIZONTAL));
 

@@ -48,7 +48,7 @@ html {
     --paper-slide-background: var(--lumo-base-color);
     --paper-slide-dot-selected: var(--lumo-primary-color);
     --paper-slide-width: 100%;
-    --paper-slide-height: 300px;
+    --paper-slide-height: 150px;
 }
 
 .option-layout {

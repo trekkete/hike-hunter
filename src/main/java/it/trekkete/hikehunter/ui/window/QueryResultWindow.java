@@ -29,6 +29,8 @@ public class QueryResultWindow extends VerticalLayout {
 
     private void constructUI() {
 
+        removeAll();
+
         setPadding(false);
         setSpacing(false);
         setMinWidth("300px");

@@ -1,8 +1,7 @@
 package it.trekkete.hikehunter.ui.views.logged;
 
 import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
-import com.google.gson.Gson;
-import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -10,26 +9,22 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.grid.GridVariant;
-import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H4;
-import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.listbox.MultiSelectListBox;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.select.Select;
+import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.WrappedSession;
 import com.vaadin.flow.theme.lumo.LumoUtility;
-import it.trekkete.hikehunter.data.entity.Location;
-import it.trekkete.hikehunter.data.entity.Trip;
-import it.trekkete.hikehunter.data.entity.TripLocation;
-import it.trekkete.hikehunter.data.entity.TripParticipants;
+import it.trekkete.hikehunter.data.entity.*;
 import it.trekkete.hikehunter.data.service.LocationRepository;
 import it.trekkete.hikehunter.data.service.TripLocationRepository;
 import it.trekkete.hikehunter.data.service.TripParticipantsRepository;
@@ -43,19 +38,21 @@ import it.trekkete.hikehunter.security.AuthenticatedUser;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.general.HomeView;
 import it.trekkete.hikehunter.ui.window.QueryResultWindow;
-import it.trekkete.hikehunter.utils.MapUtils;
+import it.trekkete.hikehunter.utils.AppEvents;
 import kong.unirest.json.JSONObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import software.xdev.vaadin.maps.leaflet.flow.data.LMarker;
 import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
 
 import javax.annotation.security.PermitAll;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.UUID;
 
 @PageTitle("Parti")
 @Route(value = "new-trip", layout = MainLayout.class)
@@ -69,7 +66,11 @@ public class CreateTripView extends VerticalLayout {
         MULTI
     }
 
-    private LocationRepository locationRepository;
+    private final AuthenticatedUser authenticatedUser;
+    private final LocationRepository locationRepository;
+    private final TripRepository tripRepository;
+    private final TripLocationRepository tripLocationRepository;
+    private final TripParticipantsRepository tripParticipantsRepository;
 
     private TextField title;
     private TextArea description;
@@ -77,247 +78,113 @@ public class CreateTripView extends VerticalLayout {
     private DatePicker endDate;
     private RadioButtonGroup<TripMode> tripMode;
     private Select<Integer> rating;
-    private TextField maxNumber;
-    private TextField searchLocation;
+    private IntegerField maxNumber;
     private LMap map;
-    private Grid<Location> locationGrid;
 
-    private List<Location> gridItems;
-    private Map<Location, LMarker> markerMap;
-
-    private Map<String, String> equipmentMap;
-
-    private final Button cancel = new Button("Annulla");
-    private final Button save = new Button("Salva");
+    private final VerticalLayout container;
 
     public CreateTripView(@Autowired AuthenticatedUser authenticatedUser,
                           @Autowired TripRepository tripRepository,
                           @Autowired TripParticipantsRepository tripParticipantsRepository,
                           @Autowired LocationRepository locationRepository,
                           @Autowired TripLocationRepository tripLocationRepository) {
-
+        this.authenticatedUser = authenticatedUser;
+        this.tripRepository = tripRepository;
+        this.tripParticipantsRepository = tripParticipantsRepository;
         this.locationRepository = locationRepository;
-        this.gridItems = new ArrayList<>();
-        this.markerMap = new HashMap<>();
-        this.equipmentMap = new HashMap<>();
+        this.tripLocationRepository = tripLocationRepository;
 
-        VerticalLayout container = new VerticalLayout();
-        container.setPadding(false);
-        container.setAlignItems(Alignment.CENTER);
-
-        container.add(createTitle());
-        container.add(createFormLayout());
-        container.add(createButtonLayout());
-
-        save.addClickListener(click -> {
-
-            if (!validateForm())
-                return;
-
-            Trip newTrip = new Trip();
-            newTrip.setTitle(title.getValue());
-            newTrip.setDescription(description.getValue());
-
-            newTrip.setCreationTs(ZonedDateTime.now().toEpochSecond());
-
-            newTrip.setRating(rating.getValue());
-
-            newTrip.setEquipment(new Gson().toJson(equipmentMap));
-
-            if (maxNumber.getValue() != null && !maxNumber.isEmpty())
-                newTrip.setMaxParticipants(Integer.parseInt(maxNumber.getValue()));
-
-            UUID creatorId = authenticatedUser.get().get().getId();
-
-            newTrip.setCreator(creatorId);
-
-            newTrip.setStartDate(startDate.getValue().atStartOfDay().atZone(ZoneId.systemDefault()).toEpochSecond());
-
-            if (tripMode.getValue().equals(TripMode.GIORNATA))
-                newTrip.setEndDate(startDate.getValue().atTime(23, 59).atZone(ZoneId.systemDefault()).toEpochSecond());
-            else
-                newTrip.setEndDate(endDate.getValue().atTime(23, 59).atZone(ZoneId.systemDefault()).toEpochSecond());
-
-            tripRepository.save(newTrip);
-
-            TripParticipants tp = new TripParticipants();
-            tp.setTrip(newTrip.getId());
-            tp.setUser(creatorId);
-
-            tripParticipantsRepository.save(tp);
-
-            for (Location location : gridItems) {
-                TripLocation tripLocation = new TripLocation();
-                tripLocation.setTrip(newTrip.getId());
-                tripLocation.setLocation(location.getId());
-                tripLocation.setIndex(gridItems.indexOf(location));
-
-                tripLocationRepository.save(tripLocation);
-            }
-
-            clearForm();
-
-            UI.getCurrent().navigate(HomeView.class);
-        });
-
-        cancel.addClickListener(click -> UI.getCurrent().navigate(HomeView.class));
+        this.container = new VerticalLayout();
+        this.container.setSizeFull();
+        this.container.setSpacing(false);
+        this.container.addClassNames(LumoUtility.AlignItems.CENTER);
 
         add(container);
     }
 
-    private Component createTitle() {
-        H2 title = new H2("Crea un'escursione");
-        title.getStyle().set("margin", "0");
+    private void constructUI() {
 
-        return title;
+        setSpacing(false);
+        setSizeFull();
+        addClassNames(LumoUtility.AlignItems.CENTER);
+
+        WrappedSession session = UI.getCurrent().getSession().getSession();
+        if (session != null
+                && session.getAttribute(AppEvents.CREATE_TRIP_STAGE) != null
+                && session.getAttribute(AppEvents.CREATE_TRIP_OBJ) != null) {
+
+            Trip trip = (Trip) session.getAttribute(AppEvents.CREATE_TRIP_OBJ);
+            Integer stage = (Integer) session.getAttribute(AppEvents.CREATE_TRIP_STAGE);
+
+            switch (stage) {
+                case 2 -> setStageTwo(trip);
+                case 3 -> setStageThree(trip);
+                default -> setStageOne(trip);
+            }
+        }
+        else {
+            setStageOne(new Trip());
+        }
+
+        add(container);
     }
 
-    private Component createFormLayout() {
-        FormLayout formLayout = new FormLayout();
+    private void setStageOne(Trip trip) {
 
-        title = new TextField("Titolo");
-        title.setMaxLength(30);
-        title.setRequired(true);
-        title.setPlaceholder("Un titolo dell'escursione");
+        setPadding(false);
 
-        description = new TextArea("Descrizione");
-        description.setMinHeight("200px");
-        description.setMaxHeight("300px");
-        description.setPlaceholder("Una descrizione sommaria del viaggio");
+        container.removeAll();
+        container.setPadding(false);
+        container.addClassNames(LumoUtility.Position.RELATIVE);
 
-        startDate = new DatePicker("Partenza");
-        startDate.setMin(LocalDate.now());
-        startDate.setWidthFull();
-        startDate.setRequired(true);
+        H4 stageTitle = new H4("Imposta l'itinerario");
+        stageTitle.addClassNames(LumoUtility.Margin.NONE,
+                LumoUtility.Padding.Horizontal.LARGE,
+                LumoUtility.Padding.Vertical.XSMALL,
+                LumoUtility.Position.ABSOLUTE,
+                LumoUtility.BorderRadius.MEDIUM);
+        stageTitle.getStyle()
+                .set("border", "2px solid rgba(0,0,0,.2)")
+                .set("background-clip", "padding-box")
+                .set("background-color", "white")
+                .set("z-index", "99")
+                .set("top", "10px");
 
-        endDate = new DatePicker("Ritorno");
-        endDate.setMin(LocalDate.now());
-        endDate.setWidthFull();
+        container.add(stageTitle);
 
-        tripMode = new RadioButtonGroup<>("Durata");
-        tripMode.setItemLabelGenerator(mode -> {
-            switch (mode)  {
-                case GIORNATA -> {
-                    return "In giornata";
-                }
-                case MULTI -> {
-                    return "Più giorni";
-                }
-            }
+        Button open = new Button(new Icon("fas", "0"));
+        open.setWidth("55px");
+        open.setHeight("55px");
+        open.getStyle().set("border", "2px solid rgba(0,0,0,.2)")
+                .set("background-clip", "padding-box")
+                .set("border-radius", "50%")
+                .set("background-color", "white");;
+        open.setEnabled(false);
 
-            return "?";
-        });
-        tripMode.setItems(TripMode.values());
-        tripMode.setValue(TripMode.GIORNATA);
+        Button next = new Button(FontAwesome.Solid.CHECK.create());
+        next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        next.setWidth("55px");
+        next.setHeight("55px");
+        next.getStyle().set("border", "2px solid rgba(0,0,0,.2)")
+                .set("background-clip", "padding-box")
+                .set("border-radius", "50%");
+        next.addClickListener(click -> {
 
-        HorizontalLayout dates = new HorizontalLayout(startDate);
-        dates.getStyle().set("flex-wrap", "wrap");
-        dates.setSpacing(false);
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.CREATE_TRIP_OBJ, trip);
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.CREATE_TRIP_STAGE, 2);
 
-        formLayout.add(title, description, tripMode, dates);
-        formLayout.setColspan(title, 2);
-        formLayout.setColspan(description, 2);
-
-        tripMode.addValueChangeListener(event -> {
-
-            if (event.getValue().equals(TripMode.GIORNATA))
-                dates.remove(endDate);
-            else
-                dates.add(endDate);
-
+            setStageTwo(trip);
         });
 
-        rating = new Select<>();
-        rating.setLabel("Difficoltà prevista");
-        rating.setItems(1, 2, 3, 4, 5);
-        rating.setValue(1);
-        rating.setRequiredIndicatorVisible(true);
-        rating.setItemLabelGenerator(Trip::formatRating);
-
-        maxNumber = new TextField("Numero massimo di partecipanti");
-
-        formLayout.add(rating, maxNumber);
-
-        H4 optionsTitle = new H4("Materiale richiesto");
-
-        HorizontalLayout optionLayout = new HorizontalLayout();
-        optionLayout.setWidthFull();
-        optionLayout.setAlignItems(Alignment.CENTER);
-        optionLayout.getStyle().set("overflow", "scroll");
-
-        optionLayout.add(createOptionLayout("shoes"));
-        optionLayout.add(createOptionLayout("harness"));
-        optionLayout.add(createOptionLayout("helmet"));
-        optionLayout.add(createOptionLayout("kit"));
-        optionLayout.add(createOptionLayout("picozza"));
-        optionLayout.add(createOptionLayout("rope"));
-        optionLayout.add(createOptionLayout("crampons"));
-        optionLayout.add(createOptionLayout("snowshoes"));
-
-        formLayout.add(optionsTitle, 2);
-        formLayout.add(optionLayout, 2);
-
-        H4 itinerari = new H4("Aggiungi itinerari");
-
-        searchLocation = new TextField();
-        searchLocation.setValueChangeMode(ValueChangeMode.EAGER);
-        searchLocation.setPlaceholder("Cerca un itinerario");
-        searchLocation.getStyle().set("padding", "0");
-        searchLocation.getStyle().set("margin-bottom", "1em");
-
-        Grid<Location> searchResultsGrid = new Grid<>();
-        searchResultsGrid.setWidthFull();
-        searchResultsGrid.setAllRowsVisible(true);
-        searchResultsGrid.setVisible(false);
-        searchResultsGrid.addColumn(Location::getName).setHeader("Fai doppio-click sull'itinerario da aggiungere");
-        searchResultsGrid.addThemeVariants(GridVariant.LUMO_COMPACT);
-        searchResultsGrid.addItemDoubleClickListener(click -> {
-            Location clickItem = click.getItem();
-
-            locationRepository.save(clickItem);
-
-            gridItems.add(clickItem);
-            locationGrid.setItems(gridItems);
-
-            map.fitBounds(gridItems.toArray(new Location[0]));
-
-            LMarker marker = new LMarker(clickItem.getLatitude(), clickItem.getLongitude());
-
-            map.addLComponents(marker);
-            markerMap.put(clickItem, marker);
-
-            searchLocation.clear();
-        });
-
-        searchResultsGrid.getStyle().set("margin-bottom", "1em");
-
-        searchLocation.addValueChangeListener(event -> {
-
-            List<Location> locations = MapUtils.getBestMatch(event.getValue());
-
-            searchResultsGrid.setItems(locations);
-
-            if (!locations.isEmpty()) {
-                searchResultsGrid.setVisible(true);
-                searchLocation.getStyle().set("margin-bottom", "0");
-            }
-            else {
-                searchResultsGrid.setVisible(false);
-                searchLocation.getStyle().set("margin-bottom", "1em");
-            }
-        });
-
-        Button mock = new Button();
-        mock.addClassNames(LumoUtility.Position.ABSOLUTE, LumoUtility.Display.HIDDEN);
-        mock.getStyle().set("right", "-" + mock.getWidth());
-
-        ContextMenu info = new ContextMenu(mock);
+        ContextMenu info = new ContextMenu(open);
         info.setOpenOnClick(true);
 
         map = new LMap(LMap.Locations.ROME);
-        map.setTileLayer(LTileLayer.DEFAULT_OPENSTREETMAP_TILE);
+        map.setTileLayer(LMap.Layers.DEFAULT_OPENSTREETMAP);
         map.getElement().executeJs("this.map.options.minZoom = 6;");
-        map.setSizeFull();
+        map.setWidthFull();
+        map.setMinHeight("100%");
+        map.setHeight("900px");
         map.addClickListener((lat, lon) -> {
 
             String query = new OverpassQueryBuilder()
@@ -349,10 +216,13 @@ public class CreateTripView extends VerticalLayout {
                     }
             ));
 
-            if (overpassLayer.getResults().isEmpty())
-                return;
+            open.setIcon(new Icon("fas", String.valueOf(overpassLayer.getResults().size())));
+            open.setEnabled(!overpassLayer.getResults().isEmpty());
 
-            mock.clickInClient();
+            if (overpassLayer.getResults().isEmpty()) {
+                return;
+            }
+
             info.removeAll();
 
             QueryResultWindow qrw = new QueryResultWindow(overpassLayer.getResults());
@@ -363,141 +233,270 @@ public class CreateTripView extends VerticalLayout {
             info.add(qrw);
         });
 
-        VerticalLayout mapContainer = new VerticalLayout(map);
-        mapContainer.setSizeFull();
-        mapContainer.setPadding(false);
-        mapContainer.setMinHeight("400px");
-        mapContainer.setHeight("0px");
-        mapContainer.addClassNames(LumoUtility.Position.RELATIVE);
-        mapContainer.add(mock);
+        VerticalLayout bottomButtonsContainer = new VerticalLayout(open, next);
+        bottomButtonsContainer.setPadding(false);
+        bottomButtonsContainer.setSpacing(false);
+        bottomButtonsContainer.setSizeUndefined();
+        bottomButtonsContainer.addClassNames(LumoUtility.Position.ABSOLUTE);
+        bottomButtonsContainer.getStyle()
+                .set("bottom", "40px")
+                .set("right", "10px")
+                .set("z-index", "99");
 
-        locationGrid = new Grid<>();
-        locationGrid.setSizeFull();
-        locationGrid.addColumn(Location::getName).setHeader("Itinerari");
-        locationGrid.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_NO_ROW_BORDERS, GridVariant.LUMO_ROW_STRIPES);
-        locationGrid.addComponentColumn(location -> {
+        container.add(bottomButtonsContainer);
 
-            Button delete = new Button(FontAwesome.Solid.TRASH.create());
-            delete.addThemeVariants(ButtonVariant.LUMO_ERROR);
-            delete.addClickListener(click -> {
-
-                gridItems.remove(location);
-                locationGrid.setItems(gridItems);
-
-                map.fitBounds(gridItems.toArray(new Location[0]));
-                map.removeLComponents(markerMap.get(location));
-
-            });
-
-            return delete;
-        }).setFlexGrow(0);
-        locationGrid.setMinHeight("200px");
-
-        formLayout.add(itinerari, 2);
-        formLayout.add(searchLocation, 2);
-        formLayout.add(searchResultsGrid, 2);
-        formLayout.add(mapContainer, 1);
-        formLayout.add(locationGrid, 1);
-
-        return formLayout;
+        container.add(map);
     }
 
-    private Component createButtonLayout() {
-        HorizontalLayout buttonLayout = new HorizontalLayout();
-        buttonLayout.setWidthFull();
-        buttonLayout.setJustifyContentMode(JustifyContentMode.CENTER);
-        buttonLayout.addClassName("button-layout");
-        save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        buttonLayout.add(save, cancel);
+    private void setStageTwo(Trip trip) {
 
-        return buttonLayout;
-    }
+        setPadding(true);
 
-    private Component createOptionLayout(String option) {
+        container.setPadding(true);
+        container.removeAll();
 
-        VerticalLayout optionLayout = new VerticalLayout();
-        optionLayout.addClassNames("option-layout", "deselected");
+        H4 stageTitle = new H4("Informazioni generali");
+        stageTitle.addClassNames(LumoUtility.Margin.NONE);
 
-        Image deselected = new Image("images/" + option + "-deselected.png", option + "-deselected");
-        Image selected = new Image("images/" + option + "-selected.png", option + "-selected");
+        container.add(stageTitle);
 
-        optionLayout.add(deselected);
+        FormLayout stageTwoLayout = new FormLayout();
+        stageTwoLayout.setWidthFull();
+        stageTwoLayout.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
 
-        optionLayout.addClickListener(click -> {
+        title = new TextField("Titolo");
+        title.setMaxLength(30);
+        title.setRequired(true);
+        title.setPlaceholder("Un titolo dell'escursione");
+        if (trip.getTitle() != null) {
+            title.setValue(trip.getTitle());
+        }
 
-            optionLayout.removeAll();
-            if (optionLayout.hasClassName("deselected")) {
-                optionLayout.removeClassName("deselected");
-                optionLayout.addClassName("selected");
+        description = new TextArea("Descrizione");
+        description.setMinHeight("200px");
+        description.setMaxHeight("300px");
+        description.setPlaceholder("Una descrizione sommaria del viaggio");
+        if (trip.getDescription() != null) {
+            description.setValue(trip.getDescription());
+        }
 
-                equipmentMap.put(option, "true");
+        startDate = new DatePicker("Partenza");
+        startDate.setMin(LocalDate.now());
+        startDate.setWidthFull();
+        startDate.setRequired(true);
+        if (trip.getStartDate() != null) {
+            startDate.setValue(LocalDate.ofInstant(Instant.ofEpochSecond(trip.getStartDate()), ZoneId.systemDefault()));
+        }
 
-                optionLayout.add(selected);
+        endDate = new DatePicker("Ritorno");
+        endDate.setMin(LocalDate.now());
+        endDate.setWidthFull();
+        if (trip.getEndDate() != null) {
+            endDate.setValue(LocalDate.ofInstant(Instant.ofEpochSecond(trip.getEndDate()), ZoneId.systemDefault()));
+        }
+
+        tripMode = new RadioButtonGroup<>("Durata");
+        tripMode.setItemLabelGenerator(mode -> {
+            switch (mode)  {
+                case GIORNATA -> {
+                    return "In giornata";
+                }
+                case MULTI -> {
+                    return "Più giorni";
+                }
             }
-            else if (optionLayout.hasClassName("selected")) {
-                optionLayout.removeClassName("selected");
-                optionLayout.addClassName("deselected");
 
-                equipmentMap.put(option, "false");
-
-                optionLayout.add(deselected);
+            return "?";
+        });
+        tripMode.setItems(TripMode.values());
+        if (trip.getStartDate() != null && trip.getEndDate() != null) {
+            if (startDate.getValue().isEqual(endDate.getValue())) {
+                tripMode.setValue(TripMode.GIORNATA);
             }
+            else {
+                tripMode.setValue(TripMode.MULTI);
+            }
+        }
+        else {
+            tripMode.setValue(TripMode.GIORNATA);
+        }
+
+        HorizontalLayout dates = new HorizontalLayout(startDate);
+        dates.getStyle().set("flex-wrap", "wrap");
+        dates.setSpacing(false);
+
+        tripMode.addValueChangeListener(event -> {
+
+            if (event.getValue().equals(TripMode.GIORNATA))
+                dates.remove(endDate);
+            else
+                dates.add(endDate);
+
         });
 
-        optionLayout.getElement().setAttribute("title", option);
+        stageTwoLayout.add(title, description, tripMode, dates);
 
-        return optionLayout;
+        Button back = new Button("Indietro");
+        back.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        back.getStyle().set("margin-top", "1.5em");
+        back.addClickListener(click -> setStageOne(trip));
+
+        Button next = new Button("Avanti");
+        next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        next.addClickListener(click -> {
+
+            if (title.isInvalid()) {
+                return;
+            }
+
+            trip.setTitle(title.getValue().trim());
+
+            if (description.isInvalid()) {
+                return;
+            }
+
+            trip.setDescription(description.getValue().trim());
+
+            trip.setStartDate(startDate.getValue().atStartOfDay().atZone(ZoneId.systemDefault()).toEpochSecond());
+
+            if (tripMode.getValue().equals(TripMode.GIORNATA)) {
+                trip.setEndDate(startDate.getValue().atTime(23, 59).atZone(ZoneId.systemDefault()).toEpochSecond());
+            }
+            else {
+
+                if (endDate.getValue().isBefore(startDate.getValue())) {
+                    endDate.setInvalid(true);
+                    endDate.setErrorMessage("La data di arrivo non può precedere la partenza");
+
+                    return;
+                }
+
+                trip.setEndDate(endDate.getValue().atTime(23, 59).atZone(ZoneId.systemDefault()).toEpochSecond());
+            }
+
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.CREATE_TRIP_OBJ, trip);
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.CREATE_TRIP_STAGE, 3);
+
+            setStageThree(trip);
+        });
+
+        container.add(stageTwoLayout);
+
+        container.addAndExpand(new Span());
+
+        FormLayout stageTwoButtons = new FormLayout();
+        stageTwoButtons.setWidthFull();
+        stageTwoButtons.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
+
+        stageTwoButtons.add(back, next);
+
+        container.add(stageTwoButtons);
     }
 
-    private boolean validateForm() {
+    private void setStageThree(Trip trip) {
 
-        boolean valid = true;
+        container.removeAll();
 
-        if (title.getValue() == null || title.isEmpty()) {
-            title.setInvalid(true);
-            title.setErrorMessage("Inserisci un titolo");
+        H4 stageTitle = new H4("Dettagli dell'itinerario");
+        stageTitle.addClassNames(LumoUtility.Margin.NONE);
 
-            valid = false;
+        container.add(stageTitle);
+
+        FormLayout stageThreeLayout = new FormLayout();
+        stageThreeLayout.setWidthFull();
+        stageThreeLayout.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
+
+        rating = new Select<>();
+        rating.setLabel("Difficoltà prevista");
+        rating.setItems(1, 2, 3, 4, 5);
+        rating.setValue(1);
+        rating.setRequiredIndicatorVisible(true);
+        rating.setItemLabelGenerator(Trip::formatRating);
+        if (trip.getRating() != null) {
+            rating.setValue(trip.getRating());
         }
 
-        if (startDate.getValue() == null || startDate.isEmpty()) {
-            startDate.setInvalid(true);
-            startDate.setErrorMessage("Inseriesci una data di partenza");
-
-            valid = false;
+        maxNumber = new IntegerField("Numero massimo di partecipanti");
+        maxNumber.setMin(1);
+        maxNumber.setStep(1);
+        maxNumber.setHasControls(false);
+        if (trip.getMaxParticipants() != null) {
+            maxNumber.setValue(trip.getMaxParticipants());
         }
 
-
-        if (rating.getValue() == null || rating.isEmpty()) {
-            rating.setInvalid(true);
-            rating.setErrorMessage("Inserisci una difficoltà stimata");
-
-            valid = false;
+        MultiSelectListBox<Equipment> equipment = new MultiSelectListBox<>();
+        equipment.setItems(Equipment.values());
+        equipment.setItemLabelGenerator(equip -> equip.name().toLowerCase().replace("_", " "));
+        if (trip.getEquipment() != null) {
+            equipment.setItems(Arrays.stream(Equipment.values()).filter(e -> (trip.getEquipment() & e.getFlag()) == e.getFlag()).toList());
         }
 
-        if (gridItems.isEmpty()) {
-            searchLocation.setInvalid(true);
-            searchLocation.setErrorMessage("Inserisci almeno un itinerario");
+        stageThreeLayout.add(rating, maxNumber, equipment);
 
-            valid = false;
-        }
+        Button back = new Button("Indietro");
+        back.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        back.getStyle().set("margin-top", "1.5em");
+        back.addClickListener(click -> setStageTwo(trip));
 
+        Button next = new Button("Fine");
+        next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        next.addClickListener(click -> {
 
-        return valid;
+            trip.setRating(rating.getValue());
+
+            trip.setMaxParticipants(maxNumber.getValue());
+
+            Optional<Integer> equip = equipment.getSelectedItems().stream().map(Equipment::getFlag).reduce(Integer::sum);
+
+            equip.ifPresent(trip::setEquipment);
+
+            trip.setCreationTs(ZonedDateTime.now().toEpochSecond());
+
+            UUID creatorId = authenticatedUser.get().get().getId();
+
+            trip.setCreator(creatorId);
+
+            tripRepository.save(trip);
+
+            TripParticipants tp = new TripParticipants();
+            tp.setTrip(trip.getId());
+            tp.setUser(creatorId);
+
+            tripParticipantsRepository.save(tp);
+
+            /*for (Location location : gridItems) {
+                TripLocation tripLocation = new TripLocation();
+                tripLocation.setTrip(trip.getId());
+                tripLocation.setLocation(location.getId());
+                tripLocation.setIndex(gridItems.indexOf(location));
+
+                tripLocationRepository.save(tripLocation);
+            }*/
+
+            UI.getCurrent().navigate(HomeView.class);
+        });
+
+        container.add(stageThreeLayout);
+
+        container.addAndExpand(new Span());
+
+        FormLayout stageThreeButtons = new FormLayout();
+        stageThreeButtons.setWidthFull();
+        stageThreeButtons.setResponsiveSteps(new FormLayout.ResponsiveStep("0px", 1),
+                new FormLayout.ResponsiveStep("600px", 2));
+
+        stageThreeButtons.add(back, next);
+
+        container.add(stageThreeButtons);
     }
 
-    private void clearForm() {
-       title.clear();
-       description.clear();
-       startDate.clear();
-       endDate.clear();
-       tripMode.setValue(TripMode.GIORNATA);
-       rating.clear();
-       maxNumber.clear();
+    @Override
+    protected void onAttach(AttachEvent attachEvent) {
+        super.onAttach(attachEvent);
 
-       gridItems.clear();
-       locationGrid.setItems(gridItems);
-
+        constructUI();
     }
-
 }
