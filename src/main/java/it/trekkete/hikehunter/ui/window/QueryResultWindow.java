@@ -15,6 +15,7 @@ import it.trekkete.hikehunter.overpass.OverpassElementKeys;
 import kong.unirest.json.JSONElement;
 import kong.unirest.json.JSONObject;
 
+import java.util.List;
 import java.util.Map;
 
 public class QueryResultWindow extends VerticalLayout {
@@ -22,9 +23,15 @@ public class QueryResultWindow extends VerticalLayout {
     private final Map<String, JSONElement> elements;
     private final Button selectButton;
 
+    private final List<JSONElement> elementsList;
+
+    private JSONObject selected;
+
     public QueryResultWindow(Map<String, JSONElement> elements) {
         this.elements = elements;
         this.selectButton = new Button("Seleziona");
+        this.elementsList = elements.values().stream().toList();
+        this.selected = (JSONObject) this.elementsList.get(0);
     }
 
     private void constructUI() {
@@ -49,7 +56,8 @@ public class QueryResultWindow extends VerticalLayout {
 
         for (int i = 0; i < elements.size(); i++) {
 
-            JSONObject element = (JSONObject) elements.values().stream().toList().get(i);
+
+            JSONObject element = (JSONObject) elementsList.get(i);
 
             VerticalLayout slideContent = new VerticalLayout();
             slideContent.setMaxHeight("calc(var(--paper-slide-height) - 50px)");
@@ -71,6 +79,10 @@ public class QueryResultWindow extends VerticalLayout {
         Carousel carousel = new Carousel(slides);
         carousel.setWidthFull();
 
+        carousel.addChangeListener(event -> {
+            this.selected = (JSONObject) this.elementsList.get(Integer.parseInt(event.getPosition()));
+        });
+
         add(buttonContainer, carousel);
 
     }
@@ -84,5 +96,9 @@ public class QueryResultWindow extends VerticalLayout {
 
     public void addCloseListener(ComponentEventListener<ClickEvent<Button>> listener) {
         this.selectButton.addClickListener(listener);
+    }
+
+    public JSONObject getSelected() {
+        return selected;
     }
 }

@@ -39,6 +39,7 @@ import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.general.HomeView;
 import it.trekkete.hikehunter.ui.window.QueryResultWindow;
 import it.trekkete.hikehunter.utils.AppEvents;
+import kong.unirest.json.JSONElement;
 import kong.unirest.json.JSONObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -50,9 +51,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @PageTitle("Parti")
 @Route(value = "new-trip", layout = MainLayout.class)
@@ -82,6 +81,9 @@ public class CreateTripView extends VerticalLayout {
     private LMap map;
 
     private final VerticalLayout container;
+    private final List<JSONElement> sortedLocations;
+    private final Map<String, JSONElement> tempLocations;
+    private final Map<String, JSONElement> savedLocations;
 
     public CreateTripView(@Autowired AuthenticatedUser authenticatedUser,
                           @Autowired TripRepository tripRepository,
@@ -98,6 +100,10 @@ public class CreateTripView extends VerticalLayout {
         this.container.setSizeFull();
         this.container.setSpacing(false);
         this.container.addClassNames(LumoUtility.AlignItems.CENTER);
+
+        this.sortedLocations = new ArrayList<>();
+        this.tempLocations = new HashMap<>();
+        this.savedLocations = new HashMap<>();
 
         add(container);
     }
@@ -185,6 +191,9 @@ public class CreateTripView extends VerticalLayout {
         map.setWidthFull();
         map.setMinHeight("100%");
         map.setHeight("900px");
+
+        LOverpassLayer overpassLayer = map.addOverpassLayer();
+
         map.addClickListener((lat, lon) -> {
 
             String query = new OverpassQueryBuilder()
@@ -194,12 +203,22 @@ public class CreateTripView extends VerticalLayout {
 
             log.trace("click query: {}", query);
 
-            LOverpassLayer overpassLayer = map.addOverpassLayer();
             overpassLayer.query(query);
 
+            open.setIcon(new Icon("fas", String.valueOf(overpassLayer.getResults().size())));
+            open.setEnabled(!overpassLayer.getResults().isEmpty());
+
+            if (overpassLayer.getResults().isEmpty()) {
+                return;
+            }
+
+            map.clear();
             map.addData(overpassLayer.toGeoJSON(
                     (feature) -> {
-                        return new LGeoJSONProperties();
+                        return new LGeoJSONProperties(){{
+                            this.setColor("#ff6688");
+                            this.setWeight("3");
+                        }};
                     },
                     (feature) -> {
                         JSONObject element = (JSONObject) feature;
@@ -216,18 +235,25 @@ public class CreateTripView extends VerticalLayout {
                     }
             ));
 
-            open.setIcon(new Icon("fas", String.valueOf(overpassLayer.getResults().size())));
-            open.setEnabled(!overpassLayer.getResults().isEmpty());
-
-            if (overpassLayer.getResults().isEmpty()) {
-                return;
-            }
-
             info.removeAll();
+
+            displaySelectedRoute(overpassLayer);
+
+            this.tempLocations.clear();
+            this.tempLocations.putAll(overpassLayer.getResults());
 
             QueryResultWindow qrw = new QueryResultWindow(overpassLayer.getResults());
             qrw.addCloseListener(click -> {
                 info.close();
+
+                JSONObject selected = qrw.getSelected();
+
+                savedLocations.put(selected.optString("id"), selected);
+                sortedLocations.add(selected);
+
+                map.clear();
+                displaySelectedRoute(overpassLayer);
+
             });
 
             info.add(qrw);
@@ -467,14 +493,14 @@ public class CreateTripView extends VerticalLayout {
 
             tripParticipantsRepository.save(tp);
 
-            /*for (Location location : gridItems) {
+            for (JSONElement location : sortedLocations) {
                 TripLocation tripLocation = new TripLocation();
                 tripLocation.setTrip(trip.getId());
-                tripLocation.setLocation(location.getId());
-                tripLocation.setIndex(gridItems.indexOf(location));
+                tripLocation.setLocation(((JSONObject) location).optString("id"));
+                tripLocation.setIndex(sortedLocations.indexOf(location));
 
                 tripLocationRepository.save(tripLocation);
-            }*/
+            }
 
             UI.getCurrent().navigate(HomeView.class);
         });
@@ -498,5 +524,31 @@ public class CreateTripView extends VerticalLayout {
         super.onAttach(attachEvent);
 
         constructUI();
+    }
+
+    private void displaySelectedRoute(LOverpassLayer overpassLayer) {
+
+        for (JSONElement location : sortedLocations) {
+            map.addData(overpassLayer.elementToGeoJson(
+                    (JSONObject) location,
+                    new LGeoJSONProperties() {{
+                        this.setColor("#3333ff");
+                        this.setWeight("6");
+                    }},
+                    (feature) -> {
+                        JSONObject element = (JSONObject) feature;
+
+                        if (element.has("tags") && element.getJSONObject("tags").has("name")) {
+                            return new Text(element.getJSONObject("tags").getString("name"));
+                        } else if (element.has("name")) {
+                            return new Text(element.getString("name"));
+                        } else if (element.has("id")) {
+                            return new Text(element.getString("id"));
+                        }
+
+                        return new Text("Sconosciuto");
+                    }
+            ));
+        }
     }
 }

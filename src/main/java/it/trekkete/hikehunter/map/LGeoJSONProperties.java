@@ -7,7 +7,7 @@ public class LGeoJSONProperties {
     private String weight;
 
     public LGeoJSONProperties() {
-        this.radius = 60L;
+        this.radius = 30L;
         this.weight = "4";
         this.color = "#88aaff";
     }
