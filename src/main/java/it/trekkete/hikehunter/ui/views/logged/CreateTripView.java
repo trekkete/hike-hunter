@@ -2,11 +2,13 @@ package it.trekkete.hikehunter.ui.views.logged;
 
 import com.flowingcode.vaadin.addons.fontawesome.FontAwesome;
 import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.HasText;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
+import com.vaadin.flow.component.contextmenu.MenuItem;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H4;
@@ -24,7 +26,10 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.WrappedSession;
 import com.vaadin.flow.theme.lumo.LumoUtility;
-import it.trekkete.hikehunter.data.entity.*;
+import it.trekkete.hikehunter.data.entity.Equipment;
+import it.trekkete.hikehunter.data.entity.Trip;
+import it.trekkete.hikehunter.data.entity.TripLocation;
+import it.trekkete.hikehunter.data.entity.TripParticipants;
 import it.trekkete.hikehunter.data.service.LocationRepository;
 import it.trekkete.hikehunter.data.service.TripLocationRepository;
 import it.trekkete.hikehunter.data.service.TripParticipantsRepository;
@@ -35,16 +40,16 @@ import it.trekkete.hikehunter.map.LOverpassLayer;
 import it.trekkete.hikehunter.overpass.OverpassQueryBuilder;
 import it.trekkete.hikehunter.overpass.OverpassQueryOptions;
 import it.trekkete.hikehunter.security.AuthenticatedUser;
+import it.trekkete.hikehunter.ui.components.QueryResultItem;
+import it.trekkete.hikehunter.ui.components.SelectedLocationItem;
 import it.trekkete.hikehunter.ui.views.MainLayout;
 import it.trekkete.hikehunter.ui.views.general.HomeView;
-import it.trekkete.hikehunter.ui.window.QueryResultWindow;
 import it.trekkete.hikehunter.utils.AppEvents;
 import kong.unirest.json.JSONElement;
 import kong.unirest.json.JSONObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import software.xdev.vaadin.maps.leaflet.flow.data.LTileLayer;
 
 import javax.annotation.security.PermitAll;
 import java.time.Instant;
@@ -163,27 +168,19 @@ public class CreateTripView extends VerticalLayout {
         open.setHeight("55px");
         open.getStyle().set("border", "2px solid rgba(0,0,0,.2)")
                 .set("background-clip", "padding-box")
-                .set("border-radius", "50%")
-                .set("background-color", "white");;
+                .set("border-radius", "50%");
         open.setEnabled(false);
 
-        Button next = new Button(FontAwesome.Solid.CHECK.create());
+        ContextMenu resultsContextMenu = new ContextMenu(open);
+        resultsContextMenu.setOpenOnClick(true);
+
+        Button next = new Button(FontAwesome.Solid.LIST_CHECK.create());
         next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         next.setWidth("55px");
         next.setHeight("55px");
         next.getStyle().set("border", "2px solid rgba(0,0,0,.2)")
                 .set("background-clip", "padding-box")
                 .set("border-radius", "50%");
-        next.addClickListener(click -> {
-
-            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.CREATE_TRIP_OBJ, trip);
-            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.CREATE_TRIP_STAGE, 2);
-
-            setStageTwo(trip);
-        });
-
-        ContextMenu info = new ContextMenu(open);
-        info.setOpenOnClick(true);
 
         map = new LMap(LMap.Locations.ROME);
         map.setTileLayer(LMap.Layers.DEFAULT_OPENSTREETMAP);
@@ -193,6 +190,13 @@ public class CreateTripView extends VerticalLayout {
         map.setHeight("900px");
 
         LOverpassLayer overpassLayer = map.addOverpassLayer();
+        displaySelectedRoute(overpassLayer);
+
+        ContextMenu selectedContextMenu = new ContextMenu(next);
+        selectedContextMenu.setOpenOnClick(true);
+
+        updateSelectedContextMenu(selectedContextMenu, next, overpassLayer, trip);
+        updateResultsContextMenu(resultsContextMenu, open, overpassLayer, selectedContextMenu, next, trip);
 
         map.addClickListener((lat, lon) -> {
 
@@ -205,8 +209,9 @@ public class CreateTripView extends VerticalLayout {
 
             overpassLayer.query(query);
 
+            this.tempLocations.clear();
+
             open.setIcon(new Icon("fas", String.valueOf(overpassLayer.getResults().size())));
-            open.setEnabled(!overpassLayer.getResults().isEmpty());
 
             if (overpassLayer.getResults().isEmpty()) {
                 return;
@@ -235,31 +240,16 @@ public class CreateTripView extends VerticalLayout {
                     }
             ));
 
-            info.removeAll();
-
             displaySelectedRoute(overpassLayer);
 
-            this.tempLocations.clear();
             this.tempLocations.putAll(overpassLayer.getResults());
 
-            QueryResultWindow qrw = new QueryResultWindow(overpassLayer.getResults());
-            qrw.addCloseListener(click -> {
-                info.close();
+            updateResultsContextMenu(resultsContextMenu, open, overpassLayer, selectedContextMenu, next, trip);
 
-                JSONObject selected = qrw.getSelected();
-
-                savedLocations.put(selected.optString("id"), selected);
-                sortedLocations.add(selected);
-
-                map.clear();
-                displaySelectedRoute(overpassLayer);
-
-            });
-
-            info.add(qrw);
         });
 
         VerticalLayout bottomButtonsContainer = new VerticalLayout(open, next);
+        bottomButtonsContainer.setId("createTripViewButtons");
         bottomButtonsContainer.setPadding(false);
         bottomButtonsContainer.setSpacing(false);
         bottomButtonsContainer.setSizeUndefined();
@@ -366,7 +356,11 @@ public class CreateTripView extends VerticalLayout {
         Button back = new Button("Indietro");
         back.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         back.getStyle().set("margin-top", "1.5em");
-        back.addClickListener(click -> setStageOne(trip));
+        back.addClickListener(click -> {
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.CREATE_TRIP_STAGE, 1);
+
+            setStageOne(trip);
+        });
 
         Button next = new Button("Avanti");
         next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
@@ -465,7 +459,12 @@ public class CreateTripView extends VerticalLayout {
         Button back = new Button("Indietro");
         back.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         back.getStyle().set("margin-top", "1.5em");
-        back.addClickListener(click -> setStageTwo(trip));
+        back.addClickListener(click -> {
+
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.CREATE_TRIP_STAGE, 2);
+
+            setStageTwo(trip);
+        });
 
         Button next = new Button("Fine");
         next.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
@@ -501,6 +500,9 @@ public class CreateTripView extends VerticalLayout {
 
                 tripLocationRepository.save(tripLocation);
             }
+
+            UI.getCurrent().getSession().getSession().removeAttribute(AppEvents.CREATE_TRIP_OBJ);
+            UI.getCurrent().getSession().getSession().removeAttribute(AppEvents.CREATE_TRIP_STAGE);
 
             UI.getCurrent().navigate(HomeView.class);
         });
@@ -550,5 +552,78 @@ public class CreateTripView extends VerticalLayout {
                     }
             ));
         }
+    }
+
+    private void updateResultsContextMenu(ContextMenu resultsContextMenu, Button target, LOverpassLayer overpassLayer, ContextMenu selectedContextMenu, Button next, Trip trip) {
+
+        resultsContextMenu.removeAll();
+
+        target.setEnabled(!tempLocations.isEmpty());
+
+        tempLocations.forEach((id, elem) -> {
+
+            MenuItem menuItem = resultsContextMenu.addItem(new QueryResultItem(elem), click -> {
+
+                resultsContextMenu.close();
+
+                JSONObject selected = (JSONObject) elem;
+
+                savedLocations.put(selected.optString("id"), selected);
+                sortedLocations.add(selected);
+
+                map.clear();
+                displaySelectedRoute(overpassLayer);
+
+                updateSelectedContextMenu(selectedContextMenu, next, overpassLayer, trip);
+            });
+            menuItem.getElement().getClassList().add(LumoUtility.Border.BOTTOM);
+            menuItem.getElement().getClassList().add(LumoUtility.BorderColor.CONTRAST_10);
+        });
+    }
+
+    private void updateSelectedContextMenu(ContextMenu selectedContextMenu, Button target, LOverpassLayer overpassLayer, Trip trip) {
+
+        selectedContextMenu.removeAll();
+
+        Button next = new Button("Prosegui");
+        next.addClickListener(click -> {
+            selectedContextMenu.close();
+
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.CREATE_TRIP_OBJ, trip);
+            UI.getCurrent().getSession().getSession().setAttribute(AppEvents.CREATE_TRIP_STAGE, 2);
+
+            setStageTwo(trip);
+        });
+        next.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
+
+        HorizontalLayout container = new HorizontalLayout(next);
+        container.addClassNames(
+                LumoUtility.Width.FULL,
+                LumoUtility.AlignItems.CENTER,
+                LumoUtility.JustifyContent.END,
+                LumoUtility.Padding.Horizontal.SMALL);
+
+        selectedContextMenu.add(container);
+
+        target.setEnabled(!sortedLocations.isEmpty());
+
+        sortedLocations.forEach(elem2 -> {
+            SelectedLocationItem item = new SelectedLocationItem(elem2);
+
+            MenuItem menuItem = selectedContextMenu.addItem(item);
+            menuItem.getElement().getClassList().add(LumoUtility.Border.BOTTOM);
+            menuItem.getElement().getClassList().add(LumoUtility.BorderColor.CONTRAST_10);
+
+            item.getButton().addClickListener(click2 -> {
+                sortedLocations.remove(elem2);
+                savedLocations.remove(((JSONObject) elem2).getString("id"));
+                selectedContextMenu.remove(menuItem);
+
+                map.clear();
+                displaySelectedRoute(overpassLayer);
+
+                target.setEnabled(!sortedLocations.isEmpty());
+            });
+        });
     }
 }

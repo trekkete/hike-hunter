@@ -162,6 +162,18 @@ html {
   display: none;
 }
 
+#createTripViewButtons vaadin-button {
+  transition: background 0.3s ease-in-out 0s;
+}
+
+#createTripViewButtons vaadin-button:not([theme~="primary"]){
+  background-color: var(--lumo-tint);
+}
+
+#createTripViewButtons vaadin-button:not([theme~="primary"])[disabled] {
+  background-color: var(--lumo-tint-50pct);
+}
+
 @media {
 ::-webkit-scrollbar {
   display: none;
